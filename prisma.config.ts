@@ -8,7 +8,7 @@ export default definePrismaConfig({
   orm: ormConfig({
     contract: "./src/prisma/contract.prisma",
     db: {
-      connection: "postgresql://postgres:postgres123@localhost:5432/membership",
+      connection: process.env.DATABASE_URL ?? "postgresql://postgres:postgres123@localhost:5432/membership",
     },
   }),
   composer: {
