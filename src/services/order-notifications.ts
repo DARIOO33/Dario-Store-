@@ -5,12 +5,12 @@
 import { MessageRepository } from "../prisma/messages";
 import { OrderRepository } from "../prisma/orders";
 import { sendEmail } from "../lib/email";
-import { adminAlertEmail, adminNewOrderEmail, deliveryEmail, orderReceivedEmail, paymentConfirmedEmail, siteUrl } from "../lib/email-templates";
+import { adminAlertEmail, adminNewOrderEmail, deliveryEmail, orderReceivedEmail, paymentConfirmedEmail } from "../lib/email-templates";
 import { paymentLabel } from "../lib/payments";
 import { formatMillimes } from "../lib/money";
 import { UserRepository } from "../prisma/users";
 import { maskEmail } from "../lib/mask";
-import { isSupportOnline, SUPPORT_HOURS } from "../lib/store";
+import { isSupportOnline, siteUrl, SUPPORT_HOURS } from "../lib/store";
 import { createTranslator } from "../i18n/translate";
 import { toLocale } from "../i18n/config";
 

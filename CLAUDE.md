@@ -13,7 +13,9 @@ Mobile Game Coins, Subscriptions) and the only physical product (IEMs).
 ## Commands
 
 ```bash
-npm run dev            # dev server — MUST be port 3000 (auth baseURL is hardcoded)
+npm run dev            # dev server on port 3000 (logins only work at BETTER_AUTH_URL, localhost:3000 by default)
+npm run check:ready    # launch checklist (also printed at server start by src/instrumentation.ts)
+npm run start:prod     # standalone production server (after npm run build)
 npm run typecheck      # tsc --noEmit   (ignore stale errors under .next/, they regenerate on build)
 npm run lint           # eslint, must be clean (warnings count as failures)
 npm run build          # production build; always read its real exit code, don't pipe it
@@ -47,6 +49,10 @@ npm run seed:store     # demo catalogue
   database into the browser bundle and breaks the build. Shared pure helpers go in `src/lib/`.
 - Import style: `@/src/...` alias in `app/` and `components/`; relative imports in `services/`, `prisma/`,
   `actions/`, `lib/` (the seed runs them via `tsx`).
+- Payment state is `Order.paymentStatus` (set only in `OrderService`); don't infer it from `paymentSentAt` or `status`.
+- Product URLs use `slug` (`/products/<slug>`); link with the slug when you have it. Never change a slug on rename.
+- Images: `lib/cloudinary.ts` (public product photos, private chat files). Chat photos go through
+  `services/chat-images.ts` (upload/load/delete + DB fallback) — never read `MessageImage.dataBase64` directly.
 - Stock changes use a compare-and-swap inside a transaction (see `services/orders.ts`); keep that pattern.
 - Chat/photo access checks live in `services/messages.ts` — every read/write goes through `accessFor`.
 - Chat text and photos are encrypted at rest inside `prisma/messages.ts` (`lib/crypto.ts`, key `CHAT_ENCRYPTION_KEY`).
@@ -120,7 +126,18 @@ npm run seed:store     # demo catalogue
 - Server actions have a 1 MB body limit by default; `next.config.ts` raises it to 8 MB for chat photos.
 - Don't call `useSearchParams` in the header/layout (forces client-side bailouts); read the pathname instead.
 
+## Production
+
+- The site's address is `BETTER_AUTH_URL` (`siteUrl()` in `lib/store.ts`): auth, email links, sitemap, robots and
+  share images use it. Never hardcode a domain.
+- Payment methods with example details are hidden by `AVAILABLE_ONLINE_METHODS` in `lib/payments.ts`; use that list
+  (not `ONLINE_METHODS`) for anything customer-facing.
+- Pages that read env at request time (robots, sitemap) must be `force-dynamic`, or the build machine's values are baked in.
+- `src/lib/readiness.ts` is the launch checklist: add a line there when a new required setting appears.
+- Legal texts live in `src/i18n/legal/{en,fr}.ts` (not the main dictionary); keep both languages in step.
+- Contact channels: `CONTACT` in `lib/store.ts`.
+
 ## Known gaps (don't "fix" silently — ask)
 
-No online payment gateway (admin confirms payments by hand), no forgot-password UI, no automatic
-delivery of digital goods, low-stock dashboard ignores variants, `baseURL` hardcoded to localhost:3000.
+No online payment gateway (admin confirms payments by hand), no self-service account deletion, no automatic
+delivery of digital goods, low-stock dashboard ignores variants.

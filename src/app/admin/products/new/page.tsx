@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CategoryService } from "@/src/services/categories";
 import ProductForm from "@/src/components/admin/ProductForm";
+import { cloudinaryConfigured } from "@/src/lib/cloudinary";
 
 export const metadata: Metadata = { title: "New product" };
 
@@ -21,6 +22,7 @@ export default async function NewProductPage() {
       <div className="panel formPanel">
         <ProductForm
           categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+          canUpload={cloudinaryConfigured()}
           initial={{ name: "", description: "", nameFr: "", descriptionFr: "", type: "PHYSICAL", price: "", stock: "", categoryId: "", imageUrls: "", featured: false, active: true, variants: [] }}
         />
       </div>

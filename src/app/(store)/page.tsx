@@ -7,6 +7,7 @@ import ProductMedia from "@/src/components/catalog/ProductMedia";
 import ProductArt from "@/src/components/catalog/ProductArt";
 import Price from "@/src/components/ui/Price";
 import { formatAmount } from "@/src/lib/money";
+import { availableMethodsText } from "@/src/lib/payments";
 import { getLocale, getT } from "@/src/i18n/server";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +42,7 @@ export default async function HomePage() {
               <span className="hLine">{t("home.line1")}</span>
               <span className="hLine hAccent">{t("home.line2")}</span>
             </h1>
-            <p>{t("home.intro")}</p>
+            <p>{t("home.intro", { methods: availableMethodsText(t) })}</p>
             <div className="heroActions">
               <Link href="/products" className="btn btnPrimary btnLg">
                 {t("home.browse")}
@@ -55,7 +56,7 @@ export default async function HomePage() {
           <div className="heroDeck" aria-label={t("home.featuredLabel")}>
             {(heroProducts.length ? heroProducts : [null, null, null]).map((product, i) =>
               product ? (
-                <Link key={product.id} href={`/products/${product.id}`} className={`deckCard deckCard${i}`} data-tilt>
+                <Link key={product.id} href={`/products/${product.slug}`} className={`deckCard deckCard${i}`} data-tilt>
                   <span className="deckArt">
                     <ProductMedia imageUrl={product.imageUrl} seed={product.id} label={product.name} alt="" />
                   </span>

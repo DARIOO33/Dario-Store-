@@ -5,6 +5,9 @@ import { ProductRepository, type ProductType, type ProductWriteInput, type Varia
 import { CategoryRepository } from "../prisma/categories";
 import { UserError } from "../lib/result";
 import { parseDinars } from "../lib/money";
+import { slugify } from "../lib/slug";
+import { sniffImageType } from "../lib/image-type";
+import { cloudinaryConfigured, uploadPublicImage } from "../lib/cloudinary";
 
 // What the admin form submits — everything as text, exactly as typed.
 export type ProductFormInput = {
@@ -143,6 +146,15 @@ async function parseForm(input: ProductFormInput) {
   return { data, images, variants };
 }
 
+// "KZ Castor (Bass)" -> kz-castor-bass, then kz-castor-bass-2 if that's taken. The slug is the
+// product's address, so it is set once and kept when the product is renamed (old links keep working).
+async function uniqueSlug(name: string) {
+  const base = slugify(name).slice(0, 80).replace(/-+$/, "") || "product";
+  let slug = base;
+  for (let n = 2; await ProductRepository.slugTaken(slug); n++) slug = `${base}-${n}`;
+  return slug;
+}
+
 export const ProductService = {
   listForAdmin: async (q: string | undefined, page: number, pageSize: number) => {
     const filter = { q, includeInactive: true };
@@ -160,7 +172,7 @@ export const ProductService = {
 
   create: async (input: ProductFormInput) => {
     const { data, images, variants } = await parseForm(input);
-    const product = await ProductRepository.create(data);
+    const product = await ProductRepository.create({ ...data, slug: await uniqueSlug(data.name) });
     await ProductRepository.replaceImages(product.id, images);
     await ProductRepository.replaceVariants(product.id, variants);
 
@@ -184,6 +196,21 @@ export const ProductService = {
   setActive: async (id: string, active: boolean) => {
     const product = await ProductRepository.setActive(id, active);
     if (!product) throw new UserError("That product no longer exists.");
+  },
+
+  // Admin: a product or variant photo, uploaded to Cloudinary. Returns its public address.
+  uploadImage: async (bytes: Uint8Array) => {
+    if (!cloudinaryConfigured()) throw new UserError("Photo upload needs Cloudinary: add the CLOUDINARY_* settings to .env and restart.");
+    if (bytes.length === 0) throw new UserError("That file is empty.");
+    if (bytes.length > 6 * 1024 * 1024) throw new UserError("That photo is too large (6 MB maximum).");
+    if (!sniffImageType(bytes)) throw new UserError("Upload a JPG, PNG or WebP photo.");
+
+    try {
+      return { url: await uploadPublicImage(Buffer.from(bytes), "dario-store/products") };
+    } catch (error) {
+      console.error("[products] Cloudinary upload failed:", error);
+      throw new UserError("The upload failed. Check the Cloudinary settings and try again.");
+    }
   },
 
   // Past orders keep their own copy of the name and price, so deleting is safe.

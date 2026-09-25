@@ -10,11 +10,13 @@ type MessageRow = NonNullable<Awaited<ReturnType<typeof db.orm.public.OrderMessa
 const decrypted = (message: MessageRow) => ({ ...message, body: openText(message.body) });
 
 export const MessageRepository = {
+  // With the sender's name, so the admin can see which staff member wrote what.
   listForOrder: async (orderId: string) => {
     const rows = await db.orm.public.OrderMessage.where({ orderId })
       .orderBy((m) => m.createdAt.asc())
+      .include("sender")
       .all();
-    return rows.map(decrypted);
+    return rows.map((row) => ({ ...row, body: openText(row.body) }));
   },
 
   findById: async (id: string) => {
@@ -22,35 +24,45 @@ export const MessageRepository = {
     return row ? decrypted(row) : null;
   },
 
-  create: async (data: { orderId: string; fromAdmin: boolean; body: string; hasImage: boolean; sensitive?: boolean }) => {
+  // `senderUserId` is empty for the messages the shop writes by itself.
+  create: async (data: { orderId: string; fromAdmin: boolean; senderUserId?: string | null; body: string; hasImage: boolean; sensitive?: boolean }) => {
     const created = await db.orm.public.OrderMessage.create({ ...data, body: sealText(data.body) });
     return decrypted(created);
   },
 
-  createImage: async (data: { messageId: string; mimeType: string; sizeBytes: number; dataBase64: string }) => {
-    return await db.orm.public.MessageImage.create({ ...data, dataBase64: sealBase64(data.dataBase64) });
+  // A photo is either in Cloudinary (`storageKey`, see services/chat-images.ts) or in `dataBase64`.
+  createImage: async (data: { messageId: string; mimeType: string; sizeBytes: number; storageKey?: string; dataBase64?: string }) => {
+    return await db.orm.public.MessageImage.create({ ...data, dataBase64: data.dataBase64 ? sealBase64(data.dataBase64) : null });
   },
 
   findImage: async (messageId: string) => {
     const image = await db.orm.public.MessageImage.first({ messageId });
-    const dataBase64 = image ? openBase64(image.dataBase64) : null;
-    return image && dataBase64 ? { ...image, dataBase64 } : null;
+    if (!image) return null;
+    // A database photo that can't be decrypted (key changed) reads as "no photo".
+    const dataBase64 = image.dataBase64 ? openBase64(image.dataBase64) : null;
+    return image.dataBase64 && !dataBase64 ? null : { ...image, dataBase64 };
   },
 
-  // Erases a "login details" message for good: its text and its photo.
+  findImagesStoredInDatabase: async () => {
+    return await db.orm.public.MessageImage.where((i) => i.dataBase64.isNotNull()).all();
+  },
+
+  setImageStorage: async (messageId: string, storageKey: string) => {
+    return await db.orm.public.MessageImage.where({ messageId }).update({ storageKey, dataBase64: null });
+  },
+
+  // Erases a "login details" message for good: its text and its photo row.
   wipe: async (id: string) => {
     await db.orm.public.MessageImage.where({ messageId: id }).delete();
     return await db.orm.public.OrderMessage.where({ id }).update({ body: "", hasImage: false, wipedAt: now() });
   },
 
   // Login-details messages older than `before` that are still readable.
-  wipeSensitiveBefore: async (before: Temporal.Instant) => {
-    const old = await db.orm.public.OrderMessage.where({ sensitive: true })
+  findSensitiveBefore: async (before: Temporal.Instant) => {
+    return await db.orm.public.OrderMessage.where({ sensitive: true })
       .where((m) => m.wipedAt.isNull())
       .where((m) => m.createdAt.lt(before))
       .all();
-
-    for (const message of old) await MessageRepository.wipe(message.id);
   },
 
   // Has the customer uploaded at least one photo (their payment proof)?

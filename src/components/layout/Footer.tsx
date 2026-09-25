@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { STORE_NAME } from "@/src/lib/store";
-import { ONLINE_METHODS, paymentLabel } from "@/src/lib/payments";
+import { AVAILABLE_ONLINE_METHODS, availableMethodsText, paymentLabel } from "@/src/lib/payments";
 import { getT } from "@/src/i18n/server";
 import LanguageSwitcher from "@/src/components/layout/LanguageSwitcher";
+import ContactLinks from "@/src/components/layout/ContactLinks";
 
 type NavCategory = { slug: string; name: string };
 
@@ -28,10 +29,11 @@ export default async function Footer({ categories }: { categories: NavCategory[]
           <strong>{STORE_NAME}</strong>
           <p>{t("store.tagline")}.</p>
           <ul className="payChips" aria-label={t("footer.paymentMethods")}>
-            {ONLINE_METHODS.map((method) => (
+            {AVAILABLE_ONLINE_METHODS.map((method) => (
               <li key={method}>{paymentLabel(t, method)}</li>
             ))}
           </ul>
+          <ContactLinks className="footerContact" />
         </div>
 
         <div>
@@ -63,7 +65,7 @@ export default async function Footer({ categories }: { categories: NavCategory[]
           <h4>{t("footer.howItWorks")}</h4>
           <ol className="footerSteps">
             <li>{t("footer.step1")}</li>
-            <li>{t("footer.step2")}</li>
+            <li>{t("footer.step2", { methods: availableMethodsText(t) })}</li>
             <li>{t("footer.step3")}</li>
             <li>{t("footer.step4")}</li>
           </ol>
@@ -76,7 +78,9 @@ export default async function Footer({ categories }: { categories: NavCategory[]
 
       <div className="wrap footerBottom">
         <span>{t("footer.copyright", { year: new Date().getFullYear(), name: STORE_NAME })}</span>
-        <span>{t("footer.place")}</span>
+        <span className="footerLegal">
+          <Link href="/terms">{t("footer.terms")}</Link> · <Link href="/privacy">{t("footer.privacy")}</Link> · {t("footer.place")}
+        </span>
         <LanguageSwitcher />
       </div>
     </footer>

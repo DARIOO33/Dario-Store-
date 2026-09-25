@@ -12,8 +12,9 @@ model User {
   accounts      Account[]
   sessions      Session[]
 
-  orders  Order[]
-  reviews Review[]
+  orders   Order[]
+  reviews  Review[]
+  messages OrderMessage[]
   @@map("user")
 }
 
@@ -103,6 +104,17 @@ enum ShipmentStatus {
   CANCELLED
 }
 
+// The payment's own life, separate from the order's fulfilment status:
+// PENDING (nothing yet) -> SUBMITTED (customer sent proof) -> VERIFIED (store checked it),
+// FAILED (proof rejected, customer can submit again), REFUNDED (money sent back).
+enum PaymentStatus {
+  PENDING
+  SUBMITTED
+  VERIFIED
+  FAILED
+  REFUNDED
+}
+
 enum PaymentMethod {
   CASH_ON_DELIVERY
   D17
@@ -136,6 +148,8 @@ model Category {
 model Product {
   id            String      @id @default(uuid())
   name          String
+  // The product's address: /products/kz-castor-bass. Set once when the product is created.
+  slug          String      @unique
   description   String      @default("")
   // French versions; empty means "show the English one".
   nameFr        String      @default("")
@@ -219,6 +233,7 @@ model Order {
   guestToken         String?     @unique
   status             OrderStatus @default(PENDING)
   paymentMethod      PaymentMethod @default(CASH_ON_DELIVERY)
+  paymentStatus      PaymentStatus @default(PENDING)
   cryptoNetwork      String?
   paymentSentAt      Timestamptz?
   currency           String      @default("TND")
@@ -267,6 +282,8 @@ model OrderMessage {
   id        String       @id @default(uuid())
   orderId   String
   fromAdmin Boolean      @default(false)
+  // Who wrote it: the customer or the staff member. Null for messages the shop writes automatically.
+  senderUserId String?
   body      String       @default("")
   hasImage  Boolean      @default(false)
   // Login details (a game account, a password...): shown hidden by default and wiped after a few days.
@@ -275,8 +292,9 @@ model OrderMessage {
   readAt    Timestamptz?
   createdAt Timestamptz  @default(now())
 
-  order Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  image MessageImage?
+  order  Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sender User?         @relation(fields: [senderUserId], references: [id], onDelete: SetNull)
+  image  MessageImage?
 
   @@index([orderId, createdAt])
   // Unread badges (admin menu, "My orders") and the automatic erase of old login details.
@@ -287,13 +305,16 @@ model OrderMessage {
   @@check(expression: "char_length(\"body\") <= 8000 AND (char_length(\"body\") >= 1 OR \"hasImage\" OR \"wipedAt\" IS NOT NULL)", name: "order_message_content_valid")
 }
 
-// The photo itself, base64-encoded (the contract has no binary type).
+// A chat photo. New photos live in Cloudinary as private, encrypted files (`storageKey` is the
+// Cloudinary public_id); `dataBase64` only holds photos saved before Cloudinary was set up, until
+// `npm run chat:move-images` moves them out.
 model MessageImage {
-  id        String      @id @default(uuid())
-  messageId String      @unique
-  mimeType  String
-  sizeBytes Int
-  dataBase64 String
+  id         String      @id @default(uuid())
+  messageId  String      @unique
+  mimeType   String
+  sizeBytes  Int
+  storageKey String?
+  dataBase64 String?
   createdAt Timestamptz @default(now())
 
   message OrderMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)

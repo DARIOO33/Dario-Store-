@@ -53,7 +53,8 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
             method={order.paymentMethod}
             cryptoNetwork={order.cryptoNetwork}
             status={order.status}
-            paymentSentAt={order.paymentSentAt}
+            paymentStatus={order.paymentStatus}
+            orderId={order.id}
             totalMillimes={order.totalMillimes}
             showInstructions={false}
           />

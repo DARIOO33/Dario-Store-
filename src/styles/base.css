@@ -80,3 +80,29 @@ p {
 a.cartName:hover {
   text-decoration: underline;
 }
+
+/* Terms of sale / privacy policy: a readable column of text. */
+.legal {
+  display: grid;
+  gap: 1.8rem;
+  max-width: 46rem;
+}
+
+.legal h2 {
+  margin-bottom: 0.5rem;
+  font-size: 1.6rem;
+}
+
+.legal p {
+  margin-bottom: 0.7rem;
+  color: var(--ink-2);
+  line-height: 1.65;
+}
+
+.legalContact {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-mono);
+}

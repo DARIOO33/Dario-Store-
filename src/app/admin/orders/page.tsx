@@ -61,7 +61,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
                 <div>
                   <strong className="orderNo">
                     #{order.orderNumber}
-                    {order.status === "PENDING" && order.paymentSentAt && <span className="unread unreadPay">Payment sent</span>}
+                    {order.status === "PENDING" && order.paymentStatus === "SUBMITTED" && <span className="unread unreadPay">Payment sent</span>}
                     {unread[order.id] > 0 && <span className="unread">{unread[order.id]} new</span>}
                   </strong>
                   <p className="muted">

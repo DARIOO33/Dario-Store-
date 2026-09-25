@@ -1,6 +1,21 @@
 // Everything a shop owner might want to tweak lives here.
 export const STORE_NAME = "Dario Store";
 
+// The site's public address, from BETTER_AUTH_URL (https://your-domain in production). Used for
+// links in emails, the sitemap and share previews.
+export function siteUrl() {
+  return (process.env.BETTER_AUTH_URL || "http://localhost:3000").replace(/\/$/, "");
+}
+
+// How customers reach the shop (footer, legal pages). Leave a value empty to hide it.
+export const CONTACT = {
+  instagram: "dario.store.tn",
+  facebook: "",
+  // International format without spaces or "+", e.g. 21651099580
+  whatsapp: "",
+  email: "",
+};
+
 // Shipping applies only to physical products: a flat fee, free once the
 // physical part of the cart reaches the threshold. Amounts are in millimes.
 export const SHIPPING_FLAT_MILLIMES = 7_000;

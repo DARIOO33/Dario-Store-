@@ -62,6 +62,14 @@ function filtered(filter: ProductFilter) {
   return query;
 }
 
+// Everything a product page or the admin form shows: all images, variants and the category.
+function withDetails(query: ReturnType<typeof db.orm.public.Product.where>) {
+  return query
+    .include("images", (images) => images.orderBy((i) => i.position.asc()))
+    .include("variants", (variants) => variants.orderBy((v) => v.position.asc()))
+    .include("category");
+}
+
 export const ProductRepository = {
   // Cards only need the cover image, so only the first image is loaded.
   findMany: async (filter: ProductFilter, sort: ProductSort, limit: number, offset: number) => {
@@ -90,11 +98,15 @@ export const ProductRepository = {
   },
 
   findById: async (id: string) => {
-    return await db.orm.public.Product.where({ id })
-      .include("images", (images) => images.orderBy((i) => i.position.asc()))
-      .include("variants", (variants) => variants.orderBy((v) => v.position.asc()))
-      .include("category")
-      .first();
+    return await withDetails(db.orm.public.Product.where({ id })).first();
+  },
+
+  findBySlug: async (slug: string) => {
+    return await withDetails(db.orm.public.Product.where({ slug })).first();
+  },
+
+  slugTaken: async (slug: string) => {
+    return (await db.orm.public.Product.first({ slug })) !== null;
   },
 
   findByIds: async (ids: string[]) => {
@@ -119,7 +131,7 @@ export const ProductRepository = {
     return total;
   },
 
-  create: async (data: ProductWriteInput) => {
+  create: async (data: ProductWriteInput & { slug: string }) => {
     return await db.orm.public.Product.create(data);
   },
 

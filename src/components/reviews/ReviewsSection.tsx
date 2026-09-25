@@ -8,13 +8,15 @@ import { getT } from "@/src/i18n/server";
 
 type Props = {
   productId: string;
+  // For the page links (/products/<slug>).
+  productSlug: string;
   viewer: { id: string; name: string; role: string } | null;
   page: number;
 };
 
 // Everything under a product: the rating summary, the form (for people who
 // bought it) and the reviews.
-export default async function ReviewsSection({ productId, viewer, page }: Props) {
+export default async function ReviewsSection({ productId, productSlug, viewer, page }: Props) {
   const t = await getT();
   const [summary, list, access] = await Promise.all([
     ReviewService.summary(productId),
@@ -49,7 +51,7 @@ export default async function ReviewsSection({ productId, viewer, page }: Props)
       ) : (
         <>
           <ReviewList reviews={list.reviews} />
-          <Pagination page={page} pages={list.pages} href={(p) => `/products/${productId}${p === 1 ? "" : `?rpage=${p}`}#reviews`} />
+          <Pagination page={page} pages={list.pages} href={(p) => `/products/${productSlug}${p === 1 ? "" : `?rpage=${p}`}#reviews`} />
         </>
       )}
     </section>

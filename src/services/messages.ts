@@ -6,15 +6,27 @@ import { OrderRepository } from "../prisma/orders";
 import { userError } from "../lib/result";
 import { now } from "../lib/time";
 import { SENSITIVE_MESSAGE_DAYS } from "../lib/store";
+import { sniffImageType } from "../lib/image-type";
+import { ChatImages } from "./chat-images";
 
 const MAX_LENGTH = 1000;
 const MAX_PER_MINUTE = 8;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-type Viewer = { id: string; role: string } | null;
+type Viewer = { id: string; role: string; name?: string } | null;
 
 // What the browser gets: plain values only (no Temporal objects).
-export type ChatMessage = { id: string; fromAdmin: boolean; body: string; hasImage: boolean; sensitive: boolean; wiped: boolean; createdAt: string };
+export type ChatMessage = {
+  id: string;
+  fromAdmin: boolean;
+  // Shown to admins only: which staff member wrote a store message.
+  senderName: string | null;
+  body: string;
+  hasImage: boolean;
+  sensitive: boolean;
+  wiped: boolean;
+  createdAt: string;
+};
 
 export type ChatPayment = {
   // Photos are only for orders paid online.
@@ -41,10 +53,13 @@ async function accessFor(orderId: string, viewer: Viewer, asAdmin: boolean) {
   return allowed ? { order, asAdmin } : null;
 }
 
-function toChat(message: { id: string; fromAdmin: boolean; body: string; hasImage: boolean; sensitive: boolean; wipedAt: Temporal.Instant | null; createdAt: Temporal.Instant }): ChatMessage {
+type MessageRowForChat = { id: string; fromAdmin: boolean; body: string; hasImage: boolean; sensitive: boolean; wipedAt: Temporal.Instant | null; createdAt: Temporal.Instant; sender?: { name: string } | null };
+
+function toChat(message: MessageRowForChat, forAdmin: boolean): ChatMessage {
   return {
     id: message.id,
     fromAdmin: message.fromAdmin,
+    senderName: forAdmin && message.fromAdmin ? (message.sender?.name ?? null) : null,
     body: message.body,
     hasImage: message.hasImage,
     sensitive: message.sensitive,
@@ -53,19 +68,6 @@ function toChat(message: { id: string; fromAdmin: boolean; body: string; hasImag
   };
 }
 
-// Never trust the browser's file type: look at the first bytes to see what
-// the file really is, and only accept ordinary photo formats (no SVG, which
-// can carry scripts).
-function sniffImageType(bytes: Uint8Array) {
-  const starts = (...sig: number[]) => sig.every((byte, i) => bytes[i] === byte);
-
-  if (starts(0xff, 0xd8, 0xff)) return "image/jpeg";
-  if (starts(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)) return "image/png";
-  if (starts(0x52, 0x49, 0x46, 0x46) && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
-    return "image/webp";
-  }
-  return null;
-}
 
 // The stage the order is at and when it got there. Orders from before these dates were recorded
 // fall back to their last update.
@@ -79,10 +81,20 @@ function currentStage(order: { status: string; updatedAt: Temporal.Instant; paid
 // Login details don't stay around: old ones (in every chat) are erased when a chat is opened.
 // Chats refresh every few seconds, so this runs at most once every 10 minutes per server.
 let lastErase = 0;
+
+// Deletes the photo (wherever it's kept), then blanks the message.
+async function wipeMessage(messageId: string) {
+  const image = await MessageRepository.findImage(messageId);
+  if (image) await ChatImages.remove(image);
+  await MessageRepository.wipe(messageId);
+}
+
 async function eraseOldLoginDetails() {
   if (Date.now() - lastErase < 10 * 60 * 1000) return;
   lastErase = Date.now();
-  await MessageRepository.wipeSensitiveBefore(now().subtract({ hours: SENSITIVE_MESSAGE_DAYS * 24 }));
+  for (const message of await MessageRepository.findSensitiveBefore(now().subtract({ hours: SENSITIVE_MESSAGE_DAYS * 24 }))) {
+    await wipeMessage(message.id);
+  }
 }
 
 export const MessageService = {
@@ -98,16 +110,17 @@ export const MessageService = {
 
     const online = order.paymentMethod !== "CASH_ON_DELIVERY";
     const awaiting = order.status === "PENDING" && online;
+    const submitted = order.paymentStatus === "SUBMITTED";
     const payment: ChatPayment = {
       online,
-      canMarkSent: !access.asAdmin && awaiting && !order.paymentSentAt,
+      canMarkSent: !access.asAdmin && awaiting && !submitted,
       hasProof: (await MessageRepository.countCustomerImages(orderId)) > 0,
-      sentAt: order.paymentSentAt ? order.paymentSentAt.toString() : null,
-      canRequestNewProof: access.asAdmin && awaiting && !!order.paymentSentAt,
+      sentAt: submitted && order.paymentSentAt ? order.paymentSentAt.toString() : null,
+      canRequestNewProof: access.asAdmin && awaiting && submitted,
       stage: currentStage(order),
     };
 
-    return { messages: messages.map(toChat), closed: order.status === "CANCELLED", payment };
+    return { messages: messages.map((message) => toChat(message, access.asAdmin)), closed: order.status === "CANCELLED", payment };
   },
 
   send: async (orderId: string, viewer: Viewer, asAdmin: boolean, text: string, image?: { bytes: Uint8Array }, sensitive = false) => {
@@ -132,17 +145,10 @@ export const MessageService = {
     const recent = await MessageRepository.countSince(orderId, access.asAdmin, now().subtract({ seconds: 60 }));
     if (recent >= MAX_PER_MINUTE) throw userError("errors.tooFast");
 
-    const message = await MessageRepository.create({ orderId, fromAdmin: access.asAdmin, body, hasImage: !!image, sensitive });
-    if (image && mimeType) {
-      await MessageRepository.createImage({
-        messageId: message.id,
-        mimeType,
-        sizeBytes: image.bytes.length,
-        dataBase64: Buffer.from(image.bytes).toString("base64"),
-      });
-    }
+    const message = await MessageRepository.create({ orderId, fromAdmin: access.asAdmin, senderUserId: viewer!.id, body, hasImage: !!image, sensitive });
+    if (image && mimeType) await ChatImages.save(message.id, { bytes: image.bytes, mimeType });
 
-    return { message: toChat(message) };
+    return { message: toChat({ ...message, sender: access.asAdmin ? { name: viewer!.name ?? "" } : null }, access.asAdmin) };
   },
 
   // Either side of the chat can erase a "login details" message right away (for example once the top-up is done).
@@ -153,7 +159,7 @@ export const MessageService = {
     const message = await MessageRepository.findById(messageId);
     if (!message || message.orderId !== orderId || !message.sensitive) throw userError("errors.orderNotFound");
 
-    await MessageRepository.wipe(messageId);
+    await wipeMessage(messageId);
   },
 
   // Only the order's owner or an admin can see a photo.
@@ -167,7 +173,8 @@ export const MessageService = {
     if (!order || (viewer.role !== "ADMIN" && order.userId !== viewer.id)) return null;
 
     const image = await MessageRepository.findImage(messageId);
-    return image ? { mimeType: image.mimeType, bytes: Buffer.from(image.dataBase64, "base64") } : null;
+    const bytes = image ? await ChatImages.load(image) : null;
+    return image && bytes ? { mimeType: image.mimeType, bytes } : null;
   },
 
   // For the little "new message" badges: order id -> number of unread messages.

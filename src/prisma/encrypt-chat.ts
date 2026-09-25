@@ -18,7 +18,7 @@ async function main() {
   }
 
   for (const image of await db.orm.public.MessageImage.all()) {
-    if (isSealed(image.dataBase64)) continue;
+    if (!image.dataBase64 || isSealed(image.dataBase64)) continue;
     await db.orm.public.MessageImage.where({ id: image.id }).update({ dataBase64: sealBase64(image.dataBase64) });
     photos++;
   }

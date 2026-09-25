@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { CategoryService } from "@/src/services/categories";
 import { ProductService } from "@/src/services/products";
 import ProductForm from "@/src/components/admin/ProductForm";
+import { cloudinaryConfigured } from "@/src/lib/cloudinary";
 import { millimesToInput } from "@/src/lib/money";
 
 export const metadata: Metadata = { title: "Edit product" };
@@ -23,7 +24,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
           </Link>
           <h1>{product.name}</h1>
         </div>
-        <Link href={`/products/${product.id}`} className="btn btnGhost">
+        <Link href={`/products/${product.slug}`} className="btn btnGhost">
           View in store ↗
         </Link>
       </header>
@@ -31,6 +32,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         <ProductForm
           productId={product.id}
           categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+          canUpload={cloudinaryConfigured()}
           initial={{
             name: product.name,
             description: product.description,

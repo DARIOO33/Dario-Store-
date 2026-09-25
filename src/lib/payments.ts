@@ -63,3 +63,22 @@ export function paymentLineLabel(t: Translator, label: string) {
   const known: Record<string, string> = t.messages.payments.lineLabels;
   return known[label] ?? label;
 }
+
+// A value still holding the example text (000…, XXX…, "Your bank name") is not a real account.
+// Methods and crypto networks with such values are hidden from checkout and refused by the server,
+// so nobody is ever shown a fake address. Fill in real details above and they appear by themselves.
+function isPlaceholder(value: string) {
+  return /^[\s0xX.:-]*$/.test(value.replace(/^0x|^bc1q|^T/, "")) || /your bank name/i.test(value);
+}
+
+export const AVAILABLE_CRYPTO_NETWORKS = CRYPTO_NETWORKS.filter((network) => !isPlaceholder(network.address));
+
+export const AVAILABLE_ONLINE_METHODS = ONLINE_METHODS.filter((method) =>
+  method === "CRYPTO" ? AVAILABLE_CRYPTO_NETWORKS.length > 0 : PAYMENT_INFO[method].lines.every((line) => !isPlaceholder(line.value)),
+);
+
+// "D17", "D17 or Crypto", "D17, Binance Pay or Crypto" — for sentences that name the ways to pay.
+export function availableMethodsText(t: Translator) {
+  const names = AVAILABLE_ONLINE_METHODS.map((method) => t.messages.payments.short[method]);
+  return names.length <= 1 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} ${t.messages.payments.or} ${names.at(-1)}`;
+}

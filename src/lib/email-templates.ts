@@ -21,10 +21,6 @@ export type Email = { subject: string; html: string; text: string };
 const escape = (text: string) => text.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 const withBreaks = (text: string) => escape(text).replace(/\r?\n/g, "<br>");
 
-// Where the buttons in the email point. Set BETTER_AUTH_URL to your real address in production.
-export function siteUrl() {
-  return (process.env.BETTER_AUTH_URL || "http://localhost:3000").replace(/\/$/, "");
-}
 
 type Frame = {
   t: Translator;

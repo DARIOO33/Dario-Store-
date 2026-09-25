@@ -87,7 +87,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
             method={order.paymentMethod}
             cryptoNetwork={order.cryptoNetwork}
             status={order.status}
-            paymentSentAt={order.paymentSentAt}
+            paymentStatus={order.paymentStatus}
             totalMillimes={order.totalMillimes}
             showInstructions
           />

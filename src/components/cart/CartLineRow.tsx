@@ -22,7 +22,7 @@ export default function CartLineRow({ row: { line, product, available, cap }, on
 
       <div className="cartInfo">
         {product ? (
-          <Link href={`/products/${product.productId}`} className="cartName">
+          <Link href={`/products/${product.slug}`} className="cartName">
             {product.name}
             {product.variantName && <span className="cartVariant"> · {product.variantName}</span>}
           </Link>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { GOVERNORATES } from "@/src/lib/store";
 import { rememberAfterLogin } from "@/src/lib/after-login";
-import { CRYPTO_NETWORKS, ONLINE_METHODS, paymentHint, paymentLabel, type PaymentMethod } from "@/src/lib/payments";
+import { AVAILABLE_CRYPTO_NETWORKS, AVAILABLE_ONLINE_METHODS, paymentHint, paymentLabel, type PaymentMethod } from "@/src/lib/payments";
 import { useT } from "@/src/i18n/client";
 
 export type CheckoutForm = {
@@ -112,7 +112,7 @@ export default function CheckoutFields({ form, onChange, onSubmit, error, signed
         <fieldset className="payFields">
           <legend>{t("checkout.paymentMethod")}</legend>
           <div className="payGrid" role="radiogroup" aria-label={t("checkout.paymentMethod")}>
-            {ONLINE_METHODS.map((method) => (
+            {AVAILABLE_ONLINE_METHODS.map((method) => (
               <label key={method} className={`payOption${form.paymentMethod === method ? " active" : ""}`}>
                 <input type="radio" name="paymentMethod" value={method} checked={form.paymentMethod === method} onChange={onChange("paymentMethod")} required />
                 <strong>{paymentLabel(t, method)}</strong>
@@ -124,7 +124,7 @@ export default function CheckoutFields({ form, onChange, onSubmit, error, signed
               <label htmlFor="co-network">{t("checkout.network")}</label>
               <select id="co-network" className="input" value={form.cryptoNetwork} onChange={onChange("cryptoNetwork")} required>
                 <option value="">{t("checkout.chooseNetwork")}</option>
-                {CRYPTO_NETWORKS.map((network) => (
+                {AVAILABLE_CRYPTO_NETWORKS.map((network) => (
                   <option key={network.id} value={network.id}>
                     {network.label}
                   </option>
@@ -133,7 +133,7 @@ export default function CheckoutFields({ form, onChange, onSubmit, error, signed
             </div>
           )}
           <p className="hint">
-            {ONLINE_METHODS.includes(form.paymentMethod as PaymentMethod)
+            {AVAILABLE_ONLINE_METHODS.includes(form.paymentMethod as PaymentMethod)
               ? paymentHint(t, form.paymentMethod as PaymentMethod)
               : t("checkout.paymentDefaultHint")}
           </p>

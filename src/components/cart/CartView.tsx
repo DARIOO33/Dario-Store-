@@ -6,6 +6,7 @@ import { authClient } from "@/src/lib/auth-client";
 import { placeOrderAction } from "@/src/actions/orders";
 import { cartKey } from "@/src/lib/cart-key";
 import { rememberPlacedOrder } from "@/src/lib/placed-order";
+import { AVAILABLE_ONLINE_METHODS } from "@/src/lib/payments";
 import { useCart } from "@/src/components/cart/CartProvider";
 import EmptyState from "@/src/components/ui/EmptyState";
 import CartLineRow from "@/src/components/cart/CartLineRow";
@@ -37,7 +38,8 @@ export default function CartView() {
     city: "",
     postalCode: "",
     notes: "",
-    paymentMethod: "",
+    // With a single way to pay, it is already chosen.
+    paymentMethod: AVAILABLE_ONLINE_METHODS.length === 1 ? AVAILABLE_ONLINE_METHODS[0]! : "",
     cryptoNetwork: "",
     ...edits,
   };

@@ -8,6 +8,8 @@ export type OrderStatus = "PENDING" | "PAID" | "SHIPPED" | "DELIVERED" | "CANCEL
 export const ORDER_STATUSES: OrderStatus[] = ["PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"];
 
 // Statuses that count as real sales (money received or on its way).
+export type PaymentStatus = "PENDING" | "SUBMITTED" | "VERIFIED" | "FAILED" | "REFUNDED";
+
 export const REVENUE_STATUSES: OrderStatus[] = ["PAID", "SHIPPED", "DELIVERED"];
 
 export const OrderRepository = {
@@ -39,6 +41,13 @@ export const OrderRepository = {
     return total;
   },
 
+  countByEmailSince: async (email: string, since: Temporal.Instant) => {
+    const { total } = await db.orm.public.Order.where({ customerEmail: email })
+      .where((o) => o.createdAt.gte(since))
+      .aggregate((a) => ({ total: a.count() }));
+    return total;
+  },
+
   findSince: async (since: Temporal.Instant) => {
     return await db.orm.public.Order.where((o) => o.createdAt.gte(since)).all();
   },
@@ -50,14 +59,13 @@ export const OrderRepository = {
     return total ?? 0;
   },
 
-  setPaymentSent: async (id: string, at: Temporal.Instant | null) => {
-    return await db.orm.public.Order.where({ id }).update({ paymentSentAt: at, updatedAt: now() });
+  setPaymentStatus: async (id: string, paymentStatus: PaymentStatus, paymentSentAt?: Temporal.Instant | null) => {
+    return await db.orm.public.Order.where({ id }).update({ paymentStatus, ...(paymentSentAt !== undefined && { paymentSentAt }), updatedAt: now() });
   },
 
   // Orders whose customer says they've paid and are waiting for the store to check.
   findAwaitingVerification: async () => {
-    return await db.orm.public.Order.where({ status: "PENDING" })
-      .where((o) => o.paymentSentAt.isNotNull())
+    return await db.orm.public.Order.where({ status: "PENDING", paymentStatus: "SUBMITTED" })
       .orderBy((o) => o.paymentSentAt.asc())
       .all();
   },

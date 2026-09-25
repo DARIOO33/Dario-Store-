@@ -5,10 +5,10 @@ const MAX_SIDE = 1600;
 // Phone photos are big. Shrink them in the browser (max 1600px, JPEG) so the
 // upload is quick; if the browser can't decode the file, send it as it is and
 // let the server decide.
-export async function shrinkImage(file: File): Promise<File> {
+export async function shrinkImage(file: File, maxSide = MAX_SIDE): Promise<File> {
   try {
     const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(bitmap.width * scale);
     canvas.height = Math.round(bitmap.height * scale);

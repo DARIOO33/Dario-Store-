@@ -89,6 +89,16 @@ export async function previewDeliveryEmailAction(orderId: string, message: strin
   return await safely(async () => ({ html: await OrderService.previewDeliveryEmail(String(orderId), String(message ?? "")) }));
 }
 
+export async function markRefundedAction(orderId: string) {
+  await requireRole("ADMIN");
+
+  return await safely(async () => {
+    await OrderService.markRefunded(String(orderId));
+    revalidatePath("/admin", "layout");
+    revalidatePath(`/order/${orderId}`);
+  });
+}
+
 export async function setOrderStatusAction(orderId: string, status: OrderStatus) {
   await requireRole("ADMIN");
 

@@ -4,14 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createProductAction, updateProductAction } from "@/src/actions/products";
 import type { ProductFormInput, VariantFormInput } from "@/src/services/products";
+import ImageUploadButton from "@/src/components/admin/ImageUploadButton";
 
 type Props = {
   productId?: string;
   initial: ProductFormInput;
   categories: { id: string; name: string }[];
+  // Cloudinary is set up, so photos can be uploaded instead of pasted as links.
+  canUpload: boolean;
 };
 
-export default function ProductForm({ productId, initial, categories }: Props) {
+export default function ProductForm({ productId, initial, categories, canUpload }: Props) {
   const router = useRouter();
   const [form, setForm] = useState(initial);
   const [error, setError] = useState("");
@@ -141,6 +144,7 @@ export default function ProductForm({ productId, initial, categories }: Props) {
             <div className="field variantImageField">
               <label htmlFor={`v-image-${index}`}>Photo link</label>
               <input id={`v-image-${index}`} className="input" value={variant.imageUrl} onChange={(e) => setVariant(index, { imageUrl: e.target.value })} placeholder="https://… (optional)" />
+              {canUpload && <ImageUploadButton label="Upload photo" enabled onUploaded={(url) => setVariant(index, { imageUrl: url })} />}
             </div>
             <div className="variantRowActions">
               <label className="check">
@@ -180,6 +184,12 @@ export default function ProductForm({ productId, initial, categories }: Props) {
           onChange={(e) => set("imageUrls", e.target.value)}
         />
         <span className="hint">One link per line; the first is the cover. Without an image, the product gets generated artwork.</span>
+        <ImageUploadButton
+          label="Upload photos"
+          multiple
+          enabled={canUpload}
+          onUploaded={(url) => setForm((current) => ({ ...current, imageUrls: [current.imageUrls.trim(), url].filter(Boolean).join("\n") }))}
+        />
       </div>
 
       <div className="checks">

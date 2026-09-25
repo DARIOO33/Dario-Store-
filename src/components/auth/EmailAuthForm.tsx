@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/src/lib/auth-client";
 import { useT } from "@/src/i18n/client";
@@ -207,6 +208,11 @@ export default function EmailAuthForm({ mode }: Props) {
           required
         />
         {mode === "register" && <span className="hint">{t("auth.passwordHint")}</span>}
+        {mode === "login" && (
+          <Link href="/forgot-password" className="hint" style={{ justifySelf: "start" }}>
+            {t("auth.forgotLink")}
+          </Link>
+        )}
       </div>
 
       <button type="submit" className="btn btnPrimary" style={{ width: "100%" }} disabled={loading}>

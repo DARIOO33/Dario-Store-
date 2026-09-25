@@ -693,3 +693,12 @@
 .catRow:last-child {
   border-bottom: 0;
 }
+
+/* "Upload photos" next to an image-link field. */
+.uploadBtn {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}

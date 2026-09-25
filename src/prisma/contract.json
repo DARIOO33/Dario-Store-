@@ -119,6 +119,31 @@
               }
             ]
           },
+          "PaymentStatus": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "PENDING",
+                "value": "PENDING"
+              },
+              {
+                "name": "SUBMITTED",
+                "value": "SUBMITTED"
+              },
+              {
+                "name": "VERIFIED",
+                "value": "VERIFIED"
+              },
+              {
+                "name": "FAILED",
+                "value": "FAILED"
+              },
+              {
+                "name": "REFUNDED",
+                "value": "REFUNDED"
+              }
+            ]
+          },
           "ProductType": {
             "codecId": "pg/text@1",
             "members": [
@@ -477,7 +502,7 @@
                 }
               },
               "dataBase64": {
-                "nullable": false,
+                "nullable": true,
                 "type": {
                   "codecId": "pg/text@1",
                   "kind": "scalar"
@@ -508,6 +533,13 @@
                 "nullable": false,
                 "type": {
                   "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "storageKey": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               }
@@ -549,6 +581,9 @@
                 },
                 "sizeBytes": {
                   "column": "sizeBytes"
+                },
+                "storageKey": {
+                  "column": "storageKey"
                 }
               },
               "namespaceId": "public",
@@ -673,6 +708,19 @@
                 "type": {
                   "codecId": "pg/timestamptz-temporal@1",
                   "kind": "scalar"
+                }
+              },
+              "paymentStatus": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "PaymentStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
                 }
               },
               "requiresShipping": {
@@ -878,6 +926,9 @@
                 },
                 "paymentSentAt": {
                   "column": "paymentSentAt"
+                },
+                "paymentStatus": {
+                  "column": "paymentStatus"
                 },
                 "requiresShipping": {
                   "column": "requiresShipping"
@@ -1127,6 +1178,13 @@
                   "kind": "scalar"
                 }
               },
+              "senderUserId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "sensitive": {
                 "nullable": false,
                 "type": {
@@ -1174,6 +1232,22 @@
                   "model": "Order",
                   "namespace": "public"
                 }
+              },
+              "sender": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "senderUserId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
               }
             },
             "storage": {
@@ -1198,6 +1272,9 @@
                 },
                 "readAt": {
                   "column": "readAt"
+                },
+                "senderUserId": {
+                  "column": "senderUserId"
                 },
                 "sensitive": {
                   "column": "sensitive"
@@ -1293,6 +1370,13 @@
                 "nullable": false,
                 "type": {
                   "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "slug": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
               },
@@ -1439,6 +1523,9 @@
                 },
                 "ratingSum": {
                   "column": "ratingSum"
+                },
+                "slug": {
+                  "column": "slug"
                 },
                 "stock": {
                   "column": "stock"
@@ -2361,6 +2448,21 @@
                   "namespace": "public"
                 }
               },
+              "messages": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "senderUserId"
+                  ]
+                },
+                "to": {
+                  "model": "OrderMessage",
+                  "namespace": "public"
+                }
+              },
               "orders": {
                 "cardinality": "1:N",
                 "on": {
@@ -2735,7 +2837,7 @@
                 "dataBase64": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
-                  "nullable": false
+                  "nullable": true
                 },
                 "id": {
                   "codecId": "pg/text@1",
@@ -2756,6 +2858,11 @@
                   "codecId": "pg/int4@1",
                   "nativeType": "int4",
                   "nullable": false
+                },
+                "storageKey": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
                 }
               },
               "foreignKeys": [
@@ -2807,6 +2914,11 @@
                   "expression": "\"paymentMethod\" IN ('CASH_ON_DELIVERY', 'D17', 'BINANCE_PAY', 'BANK_TRANSFER', 'CRYPTO')",
                   "name": "order_paymentMethod_check_1a37d7d5",
                   "prefix": "order_paymentMethod_check"
+                },
+                {
+                  "expression": "\"paymentStatus\" IN ('PENDING', 'SUBMITTED', 'VERIFIED', 'FAILED', 'REFUNDED')",
+                  "name": "order_paymentStatus_check_acf554c6",
+                  "prefix": "order_paymentStatus_check"
                 },
                 {
                   "expression": "NOT \"requiresShipping\" OR (\"shippingAddress\" IS NOT NULL AND \"shippingCity\" IS NOT NULL AND \"customerPhone\" IS NOT NULL)",
@@ -2930,6 +3042,21 @@
                   "codecId": "pg/timestamptz-temporal@1",
                   "nativeType": "timestamptz",
                   "nullable": true
+                },
+                "paymentStatus": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "PENDING"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "PaymentStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
                 },
                 "requiresShipping": {
                   "codecId": "pg/bool@1",
@@ -3314,6 +3441,11 @@
                   "nativeType": "timestamptz",
                   "nullable": true
                 },
+                "senderUserId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
                 "sensitive": {
                   "codecId": "pg/bool@1",
                   "default": {
@@ -3346,6 +3478,23 @@
                     "namespaceId": "public",
                     "tableName": "order"
                   }
+                },
+                {
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "senderUserId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "orderMessage"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "user"
+                  }
                 }
               ],
               "indexes": [
@@ -3373,6 +3522,14 @@
                   ],
                   "name": "orderMessage_orderId_idx_d284871b",
                   "prefix": "orderMessage_orderId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "senderUserId"
+                  ],
+                  "name": "orderMessage_senderUserId_idx_64078a57",
+                  "prefix": "orderMessage_senderUserId_idx",
                   "unique": false
                 },
                 {
@@ -3503,6 +3660,11 @@
                   "nativeType": "int4",
                   "nullable": false
                 },
+                "slug": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
                 "stock": {
                   "codecId": "pg/int4@1",
                   "nativeType": "int4",
@@ -3584,7 +3746,13 @@
                   "id"
                 ]
               },
-              "uniques": []
+              "uniques": [
+                {
+                  "columns": [
+                    "slug"
+                  ]
+                }
+              ]
             },
             "productImage": {
               "columns": {
@@ -4502,6 +4670,16 @@
                 "CRYPTO"
               ]
             },
+            "PaymentStatus": {
+              "kind": "valueSet",
+              "values": [
+                "PENDING",
+                "SUBMITTED",
+                "VERIFIED",
+                "FAILED",
+                "REFUNDED"
+              ]
+            },
             "ProductType": {
               "kind": "valueSet",
               "values": [
@@ -4537,7 +4715,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "828a1a2ef10f8849faaae5fd3a4572f6a727c9e6ce9bbb33e37cb43d91b5ac61"
+    "storageHash": "8160b6619e54a116f65dfd23f5f65e1d772e76a0d06de7894287fbe5693d3676"
   },
   "execution": {
     "executionHash": "6a16b8ff9f9533b7d48194eeb95ffffc7508d3c2a6416861ee41e024191c50f9",

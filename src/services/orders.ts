@@ -4,7 +4,7 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { db } from "../prisma/db";
 import { ProductRepository } from "../prisma/products";
-import { OrderRepository, ORDER_STATUSES, type OrderStatus } from "../prisma/orders";
+import { OrderRepository, ORDER_STATUSES, type OrderStatus, type PaymentStatus } from "../prisma/orders";
 import { MessageRepository } from "../prisma/messages";
 import { OrderNotifications } from "./order-notifications";
 import { emailConfigured } from "../lib/email";
@@ -12,7 +12,7 @@ import { UserError, userError } from "../lib/result";
 import { now } from "../lib/time";
 import { cartKey } from "../lib/cart-key";
 import { MAX_QUANTITY_PER_LINE, shippingFee } from "../lib/store";
-import { CRYPTO_NETWORKS, ONLINE_METHODS, type PaymentMethod } from "../lib/payments";
+import { AVAILABLE_CRYPTO_NETWORKS, AVAILABLE_ONLINE_METHODS, type PaymentMethod } from "../lib/payments";
 import { localized } from "../i18n/content";
 import { createTranslator } from "../i18n/translate";
 import { toLocale, type Locale } from "../i18n/config";
@@ -47,6 +47,8 @@ type OrderLine = {
   label: string;
   unitPrice: number;
 };
+
+const MAX_ORDERS_PER_HOUR = 5;
 
 // Virtual-only orders are never "shipped".
 export function allowedStatuses(requiresShipping: boolean): OrderStatus[] {
@@ -144,12 +146,12 @@ function resolvePayment(hasVirtual: boolean, input: CheckoutInput) {
   if (hasVirtual) {
     if (!input.userId) throw userError("errors.loginForDigital");
 
-    const chosen = ONLINE_METHODS.find((method) => method === input.paymentMethod);
+    const chosen = AVAILABLE_ONLINE_METHODS.find((method) => method === input.paymentMethod);
     if (!chosen) throw userError("errors.choosePayment");
     paymentMethod = chosen;
 
     if (chosen === "CRYPTO") {
-      const network = CRYPTO_NETWORKS.find((n) => n.id === input.cryptoNetwork);
+      const network = AVAILABLE_CRYPTO_NETWORKS.find((n) => n.id === input.cryptoNetwork);
       if (!network) throw userError("errors.chooseNetwork");
       cryptoNetwork = network.id;
     }
@@ -168,6 +170,13 @@ function stageDates(order: { paidAt: Temporal.Instant | null; shippedAt: Tempora
     ...(status === "SHIPPED" && !order.shippedAt && { shippedAt: at }),
     ...(reached >= 3 && !order.deliveredAt && { deliveredAt: at }),
   };
+}
+
+// Moving an order to Paid / Shipped / Delivered means the store has its money: the payment is VERIFIED.
+// (Cash on delivery too, once delivered.) Cancelling doesn't touch it: a refund is its own step.
+function paymentFor(order: { paymentStatus: PaymentStatus }, status: OrderStatus) {
+  const settled = status === "PAID" || status === "SHIPPED" || status === "DELIVERED";
+  return settled && order.paymentStatus !== "VERIFIED" ? { paymentStatus: "VERIFIED" as const } : {};
 }
 
 const sum = (lines: OrderLine[]) => lines.reduce((total, line) => total + line.unitPrice * line.quantity, 0);
@@ -222,6 +231,10 @@ export const OrderService = {
   // database — the browser only says which products and how many.
   place: async (input: CheckoutInput) => {
     const { name, email, phone } = validateContact(input);
+    // Stops a script (or an impatient double-click spree) from filling the shop with orders that hold stock.
+    if ((await OrderRepository.countByEmailSince(email, now().subtract({ hours: 1 }))) >= MAX_ORDERS_PER_HOUR) {
+      throw userError("errors.tooManyOrders");
+    }
     const lines = await resolveLines(mergeItems(input.items), input.locale);
     const hasVirtual = lines.some((line) => line.product.type === "VIRTUAL");
     const requiresShipping = lines.some((line) => line.product.type === "PHYSICAL");
@@ -330,7 +343,7 @@ export const OrderService = {
     await db.transaction(async (tx) => {
       if (status === "CANCELLED") await restock(tx, order.items);
 
-      await tx.orm.public.Order.where({ id }).update({ status, updatedAt: now(), ...stageDates(order, status) });
+      await tx.orm.public.Order.where({ id }).update({ status, updatedAt: now(), ...stageDates(order, status), ...paymentFor(order, status) });
     });
 
     // Only the first time the payment is confirmed.
@@ -371,25 +384,26 @@ export const OrderService = {
     if (!viewer || !order || order.userId !== viewer.id) throw userError("errors.orderNotFound");
     if (order.paymentMethod === "CASH_ON_DELIVERY") throw userError("errors.paidOnDelivery");
     if (order.status !== "PENDING") throw userError("errors.notWaitingPayment");
-    if (order.paymentSentAt) throw userError("errors.alreadyPaid");
+    if (order.paymentStatus === "SUBMITTED") throw userError("errors.alreadyPaid");
+    if (order.paymentStatus !== "PENDING" && order.paymentStatus !== "FAILED") throw userError("errors.notWaitingPayment");
 
     if ((await MessageRepository.countCustomerImages(id)) === 0) {
       throw userError("errors.proofFirst");
     }
 
-    await OrderRepository.setPaymentSent(id, now());
-    await MessageRepository.create({ orderId: id, fromAdmin: false, body: createTranslator(locale)("chatSystem.paymentSent"), hasImage: false });
+    await OrderRepository.setPaymentStatus(id, "SUBMITTED", now());
+    await MessageRepository.create({ orderId: id, fromAdmin: false, senderUserId: viewer.id, body: createTranslator(locale)("chatSystem.paymentSent"), hasImage: false });
     void OrderNotifications.paymentSent(order);
   },
 
-  // The proof wasn't good enough: reopen it so the customer can try again.
+  // The proof wasn't good enough: the payment is marked FAILED and the customer can send a new one.
   requestNewProof: async (id: string) => {
     const order = await OrderRepository.findById(id);
 
     if (!order) throw new UserError("That order no longer exists.");
-    if (order.status !== "PENDING" || !order.paymentSentAt) throw new UserError("There's no payment waiting to be checked.");
+    if (order.status !== "PENDING" || order.paymentStatus !== "SUBMITTED") throw new UserError("There's no payment waiting to be checked.");
 
-    await OrderRepository.setPaymentSent(id, null);
+    await OrderRepository.setPaymentStatus(id, "FAILED");
     await MessageRepository.create({
       orderId: id,
       fromAdmin: true,
@@ -397,6 +411,17 @@ export const OrderService = {
       body: createTranslator(toLocale(order.locale))("chatSystem.newProofRequested"),
       hasImage: false,
     });
+  },
+
+  // Admin: a cancelled order whose money was received and sent back.
+  markRefunded: async (id: string) => {
+    const order = await OrderRepository.findById(id);
+
+    if (!order) throw new UserError("That order no longer exists.");
+    if (order.status !== "CANCELLED") throw new UserError("Cancel the order before marking it refunded.");
+    if (order.paymentStatus !== "VERIFIED") throw new UserError("Only a payment that was received can be refunded.");
+
+    await OrderRepository.setPaymentStatus(id, "REFUNDED");
   },
 
   awaitingVerification: async () => {

@@ -30,7 +30,11 @@ export default function MessageBubble({ message, asAdmin, onImageLoad, onWipe }:
 
   return (
     <div className={`msg ${mine ? "msgMine" : "msgTheirs"}`}>
-      <span className="msgWho">{mine ? t("chat.you") : message.fromAdmin ? STORE_NAME : t("chat.customer")}</span>
+      <span className="msgWho">
+        {mine ? t("chat.you") : message.fromAdmin ? STORE_NAME : t("chat.customer")}
+        {/* Admins see which staff member wrote a store message ("automatic" = sent by the shop itself). */}
+        {asAdmin && message.fromAdmin && ` · ${message.senderName ?? "automatic"}`}
+      </span>
 
       {message.wiped ? (
         <p className="msgWiped">{t("chat.wiped")}</p>

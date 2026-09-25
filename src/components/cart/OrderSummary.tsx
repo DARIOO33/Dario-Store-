@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { formatMillimes } from "@/src/lib/money";
 import { FREE_SHIPPING_FROM_MILLIMES } from "@/src/lib/store";
 import type { summarize } from "@/src/components/cart/totals";
@@ -60,7 +61,11 @@ export default function OrderSummary({ totals, submitting, disabled, needsLogin,
       {hasUnavailable && <p className="cartWarn" style={{ marginTop: "0.6rem" }}>{t("summary.removeUnavailable")}</p>}
       <p className="hint" style={{ marginTop: "0.8rem" }}>
         {t("summary.recheck")}
-        {needsPayment ? t("summary.recheckChat") : ""}
+        {needsPayment ? t("summary.recheckChat") : ""} {t("summary.acceptTerms")}{" "}
+        <Link href="/terms" className="linkBtn" style={{ marginLeft: 0 }}>
+          {t("footer.terms")}
+        </Link>
+        .
       </p>
     </div>
   );

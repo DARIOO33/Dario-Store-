@@ -13,7 +13,8 @@ const database = new Pool({
 export const auth = betterAuth({
   database,
 
-  baseURL: "http://localhost:3000/",
+  // The site's public address: BETTER_AUTH_URL in production (https://your-domain), localhost in development.
+  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000/",
 
   // Email + password. Signing in is blocked until the email is verified, and
   // verification is done with a 6-digit OTP (see the emailOTP plugin below)

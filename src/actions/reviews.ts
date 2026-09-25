@@ -8,8 +8,7 @@ import { getCurrentUser, requireRole } from "../lib/session";
 import { safely } from "../lib/result";
 import { ReviewService } from "../services/reviews";
 
-function refreshReviews(productId?: string) {
-  if (productId) revalidatePath(`/products/${productId}`);
+function refreshReviews() {
   revalidatePath("/", "layout");
 }
 
@@ -22,7 +21,7 @@ export async function submitReviewAction(productId: string, input: { rating: num
       message: String(input?.message ?? ""),
       hideName: input?.hideName === true,
     });
-    refreshReviews(String(productId));
+    refreshReviews();
   });
 }
 

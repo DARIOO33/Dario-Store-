@@ -2,8 +2,8 @@
 
 An online store for Tunisia built with **Next.js (App Router)**, **Prisma 8** and **better-auth**.
 It sells digital goods (game accounts, game keys, mobile game coins, subscriptions) and one physical
-product line (IEMs). Prices are in Tunisian dinar, customers pay by D17, Binance Pay, bank transfer or
-crypto, and every account order has a private chat between the customer and the store (with payment-proof
+product line (IEMs). Prices are in Tunisian dinar, customers pay online (D17, and Binance Pay / bank transfer /
+crypto once their details are filled in) or cash on delivery, and every account order has a private chat between the customer and the store (with payment-proof
 photos). The shop speaks **English (default) and French**. Customers who bought a product can leave a star rating and review on it. A separate
 "we order it from AliExpress for you" service is tracked with shipments and a public tracking page.
 
@@ -27,14 +27,54 @@ npm run seed:store                  # optional demo catalogue (categories + prod
 npm run dev                         # http://localhost:3000
 ```
 
-> **Use port 3000.** better-auth's `baseURL` is hardcoded to `http://localhost:3000/` in
-> [src/lib/auth.ts](src/lib/auth.ts), and it rejects requests from other origins.
+> **The site's address is `BETTER_AUTH_URL`** (`http://localhost:3000` locally). Logins only work from that address,
+> so run the dev server on port 3000, or set `BETTER_AUTH_URL` to the address you use.
 
 Make yourself an admin (the account must exist first — register or use Google):
 
 ```sql
 update "user" set role = 'ADMIN' where email = 'you@example.com';
 ```
+
+## Going live
+
+Run `npm run check:ready` (the same list is printed in the server log at every start). Everything must say **OK**:
+
+| Setting | Why |
+| --- | --- |
+| `BETTER_AUTH_URL=https://your-domain` | Logins, links in emails, sitemap and share previews use it. |
+| `BETTER_AUTH_SECRET` | Signs login sessions. Long random value; never change it once live (everyone gets logged out). |
+| `DATABASE_URL` | PostgreSQL 15+. Run `npm run db:update` once against it. **Set up daily backups** at your provider. |
+| `GOOGLE_CLIENT_ID` / `_SECRET` | In Google Cloud, add `https://your-domain/api/auth/callback/google` as a redirect URI and publish the consent screen (it asks for the privacy page: `https://your-domain/privacy`). |
+| `CHAT_ENCRYPTION_KEY` | **Copy the exact key from your current `.env`**: a new key can't read existing chats. Keep a copy in a password manager. |
+| `SMTP_*`, `MAIL_FROM` | **Required**: without email, customers can't finish email sign-up (they need the 6-digit code), reset a password or get order emails. |
+| `CLOUDINARY_*` | Product photo uploads and private chat photos. |
+| `ADMIN_NOTIFY_EMAIL` (optional) | Who gets "new order" / "payment sent" emails (default: every admin). |
+
+Also before the first real order:
+
+- [src/lib/payments.ts](src/lib/payments.ts): real details for each method you want to offer. Methods still holding the
+  example values (`000…`, `XXX…`, "Your bank name") are **hidden automatically**; right now only D17 is offered.
+- [src/lib/store.ts](src/lib/store.ts): `CONTACT` (Instagram is set; add WhatsApp/email), `SUPPORT_HOURS`, shipping fee.
+- Read and adjust **/terms** and **/privacy** ([src/i18n/legal/](src/i18n/legal/)): they are drafts that describe how the
+  site works, not legal advice.
+- Delete test products, then make your account admin (SQL above) on the production database.
+
+### Deploying
+
+Any host that runs Node 20+ and PostgreSQL works (a VPS, Railway, Render, Fly…):
+
+```bash
+npm install --legacy-peer-deps
+npm run db:update          # against the production DATABASE_URL
+npm run build              # also prepares .next/standalone (postbuild)
+npm run start:prod         # node .next/standalone/server.js — reads .env if present; PORT=3000 by default
+```
+
+Put it behind HTTPS (the host's proxy, or Caddy/Nginx on a VPS). Set the environment variables in the host's
+panel or in `.env` next to the app. After deploying, open `https://your-domain/robots.txt` and `/sitemap.xml`
+to confirm they show your domain. The Prisma Composer scripts (`composer:*`, `deploy`) are an alternative path
+for Prisma Compute.
 
 **Email (SMTP):** emails are designed ([src/lib/email-templates.ts](src/lib/email-templates.ts)) and wired to
 SMTP, but **nothing is sent until you fill `SMTP_HOST` and `MAIL_FROM` (plus `SMTP_PORT`, `SMTP_SECURE`,
@@ -46,7 +86,10 @@ emails point to it. Emails: sign-up code, order received, payment confirmed, and
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` / `build` / `start` | Next.js dev server, production build, production server. |
+| `npm run dev` / `build` / `start` | Next.js dev server, production build (+ standalone prep), local production server. |
+| `npm run start:prod` | The standalone production server (what a host should run). |
+| `npm run check:ready` | Launch checklist: which settings are missing. |
+| `npm run chat:encrypt` / `chat:move-images` | Encrypt old chat messages / move database chat photos to Cloudinary (both safe to re-run). |
 | `npm run typecheck` / `lint` | `tsc --noEmit` / ESLint. Both must be clean before you commit. |
 | `npm run contract:emit` | Regenerate `contract.json` / `contract.d.ts` from `contract.prisma`. |
 | `npm run db:update` | Apply the contract to the database. Destructive changes need `-- --confirm membership`. |
@@ -73,13 +116,16 @@ lib/  – small pure helpers and config used by every layer
 src/
 ├── app/
 │   ├── (store)/            Storefront pages + layout (ticker, header, category bar, footer)
-│   │   ├── (auth)/         login, register, success (post-login redirect)
+│   │   ├── (auth)/         login, register, forgot-password, success (post-login redirect)
+│   │   ├── terms/ privacy/ Legal pages (texts in src/i18n/legal/)
 │   │   ├── c/[slug]/       A category's own page (/c/subscriptions)
 │   │   ├── track/          Public AliExpress tracking: lookup (/track) and page (/track/DS-XXXXX-XXXXX)
-│   │   ├── products/       All products, product page (/products/[id])
+│   │   ├── products/       All products, product page (/products/[slug])
 │   │   ├── cart/  order/[id]/  orders/  profile/  search/  categories/
 │   ├── admin/              Admin dashboard, products, categories, orders (guarded by admin/layout.tsx)
 │   ├── api/                auth/[...all] (better-auth) and chat-images/[messageId] (private photos)
+│   ├── robots.ts sitemap.ts icon.png opengraph-image.png   SEO and share previews
+│   └── error.tsx files     Friendly pages when something breaks (store, admin, global)
 │   └── globals.css         Only @imports the files in src/styles/
 ├── styles/                 Plain CSS split by feature (tokens, base, controls, chrome, home, catalog, ...)
 ├── components/
@@ -92,7 +138,9 @@ src/
 ├── actions/                Server actions ("use server"): check the caller, call a service, revalidate
 ├── services/               Business rules: catalog, categories, messages, orders, products, reviews, stats
 ├── prisma/                 contract.prisma (the schema), generated contract.*, db.ts, repositories, seed
-└── lib/                    money, time, slug, query, payments, store config, auth, session/guards, email
+├── instrumentation.ts      Prints the launch checklist when the server starts
+└── lib/                    money, time, slug, query, payments, store config, auth, session/guards, email,
+                            email-templates, crypto, cloudinary, readiness
 ```
 
 ### Conventions worth knowing
@@ -129,11 +177,11 @@ Defined in [src/prisma/contract.prisma](src/prisma/contract.prisma). The better-
 | Model | Notes |
 | --- | --- |
 | `Category` | `inNav` + `position` decide the header menu; `blurb` is the one-line description; `nameFr` / `blurbFr` are optional French versions. |
-| `Product` | `type` is `PHYSICAL` or `VIRTUAL`; `stock` is `null` for unlimited; `featured`, `active`; `nameFr` / `descriptionFr` are optional French versions. |
+| `Product` | `slug` is its address (`/products/kz-castor-bass`), made from the name on creation and kept on rename; old `/products/<id>` links redirect to it. `type` is `PHYSICAL` or `VIRTUAL`; `stock` is `null` for unlimited; `featured`, `active`; `nameFr` / `descriptionFr` are optional French versions. |
 | `ProductVariant` | Optional options (1 month / 3 months, editions). Carry their own price, stock and photo. |
 | `ProductImage` | Gallery images (URLs). |
-| `Order` / `OrderItem` | Items keep a **copy** of name, variant and price. `userId` is null for guest orders (they get a `guestToken`). `locale` is the language the customer ordered in; `deliveryEmailSentAt` is when the admin last emailed the delivery. |
-| `OrderMessage` / `MessageImage` | The private chat; a message may carry one photo (stored base64). |
+| `Order` / `OrderItem` | Items keep a **copy** of name, variant and price. `userId` is null for guest orders (they get a `guestToken`). `paymentStatus` (PENDING → SUBMITTED → VERIFIED, or FAILED when a proof is rejected, REFUNDED after a refund) is the payment's own state, separate from `status` (fulfilment). `locale` is the language the customer ordered in; `deliveryEmailSentAt` is when the admin last emailed the delivery. |
+| `OrderMessage` / `MessageImage` | The private chat. `fromAdmin` says which side of the conversation a message is on; `senderUserId` who wrote it (empty for automatic messages; admins see staff names). A photo lives in Cloudinary as a private encrypted file (`storageKey`), or in `dataBase64` if Cloudinary isn't set up (`npm run chat:move-images` moves those). |
 | `Shipment` / `ShipmentEvent` | An item we order from AliExpress for a customer who contacted us on social media: private contact details, item, parcel number, ETA, current stage, and a timeline of updates. `trackingCode` is the unguessable public link key. |
 | `Review` | One per customer per product: rating 1-5, optional message, `authorName` (masked when "hide my name" is ticked), admin reply, `hidden` flag. `Product.ratingCount` / `ratingSum` hold the totals shown on cards. |
 
@@ -149,7 +197,12 @@ Defined in [src/prisma/contract.prisma](src/prisma/contract.prisma). The better-
   item. Cancelling an order puts stock back. `CANCELLED` is final.
 - **Payment methods** live in [src/lib/payments.ts](src/lib/payments.ts): D17, Binance Pay, bank transfer,
   crypto (with a network choice). **Edit that file with your real account details** — they are shown to
-  customers after they order.
+  customers after they order. Methods (and crypto networks) whose details are still example values are hidden
+  from checkout and refused by the server (`AVAILABLE_ONLINE_METHODS`); texts that list the ways to pay
+  (ticker, home, footer) follow the same list.
+- **Anti-spam:** at most 5 orders per email address per hour (they hold stock).
+- **Accounts:** email + password (verified with a 6-digit emailed code) or Google. Forgotten passwords are reset at
+  `/forgot-password` with an emailed code.
 - **Payment proof flow:** the customer uploads a photo in the order chat and presses "Payment sent" (blocked
   until a proof exists). The admin sees it on the dashboard, checks the photo, then marks the order Paid or
   asks for a new proof.
@@ -178,6 +231,12 @@ Defined in [src/prisma/contract.prisma](src/prisma/contract.prisma). The better-
   stored; the chat just says "check your inbox" (masked address). Optionally marks the order Delivered. Sending needs SMTP.
 - **Placing an order:** the cart stays on screen behind a "Placing your order…" spinner until the order page opens;
   the order page (`?new=1`) then empties the cart, once, only for the order just placed ([src/lib/placed-order.ts](src/lib/placed-order.ts)).
+- **Images (Cloudinary):** with the three `CLOUDINARY_*` values in `.env`, the admin product form has *Upload photos*
+  buttons (product gallery and each variant); photos are served by Cloudinary resized/compressed (`f_auto,q_auto`).
+  Chat photos are uploaded as **private, encrypted** files and only ever reach a browser through
+  `/api/chat-images/<id>` after the access check. If an upload fails, the photo is kept in the database instead.
+- **Payment status:** "Payment sent" → SUBMITTED; *Ask for a new proof* → FAILED (the customer can send again);
+  moving the order to Paid/Shipped/Delivered → VERIFIED; on a cancelled, verified order the admin can *Mark refunded*.
 - **Chat encryption:** every chat message and photo is stored encrypted (AES-256-GCM, [src/lib/crypto.ts](src/lib/crypto.ts)),
   done inside `MessageRepository`, with the key `CHAT_ENCRYPTION_KEY` from `.env`. A leaked database or backup shows only
   scrambled text. **Back the key up**: losing it makes the chats unreadable forever. `npm run chat:encrypt` encrypts
@@ -209,10 +268,8 @@ scripted browser tests prefer `npm run build && npm start`.
 
 ## Known gaps
 
-- Emails are ready but need your SMTP settings in `.env` (see above); there is no online payment gateway — the admin
-  confirms payments by hand.
-- No forgot-password screen (the server side exists in the better-auth email-OTP plugin).
+- No online payment gateway: the admin confirms payments by hand from the proof photo.
+- Customers can't delete their account themselves (they ask; the admin deletes it in the database).
 - Digital goods are delivered by the admin through the order chat / email; there is no automatic delivery.
 - The dashboard's low-stock list ignores per-variant stock.
-- `baseURL` in `src/lib/auth.ts` is hardcoded to `localhost:3000`.
 

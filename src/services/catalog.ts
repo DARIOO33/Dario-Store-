@@ -22,6 +22,7 @@ export type VariantData = {
 
 export type ProductCardData = {
   id: string;
+  slug: string;
   name: string;
   priceMillimes: number;
   type: ProductType;
@@ -51,6 +52,7 @@ export type ProductDetailData = ProductCardData & {
 // product (and variant) and how many.
 export type CartLineData = {
   productId: string;
+  slug: string;
   variantId: string | null;
   name: string;
   variantName: string | null;
@@ -85,6 +87,7 @@ function toCard(product: ProductRow, locale: Locale): ProductCardData {
 
   return {
     id: product.id,
+    slug: product.slug,
     name: localized(locale, product.name, product.nameFr),
     priceMillimes: product.priceMillimes,
     type: product.type,
@@ -107,6 +110,8 @@ export type CatalogQuery = {
   page?: number;
   locale: Locale;
 };
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const CatalogService = {
   featured: async (limit: number, locale: Locale) => {
@@ -145,8 +150,9 @@ export const CatalogService = {
     return { items: rows.map((row) => toCard(row, query.locale)), total, page, pages: Math.max(1, Math.ceil(total / PAGE_SIZE)) };
   },
 
-  getDetail: async (id: string, locale: Locale): Promise<ProductDetailData | null> => {
-    const product = await ProductRepository.findById(id);
+  // By slug; an old /products/<id> link is found by id too (the page then redirects to the slug).
+  getDetail: async (slugOrId: string, locale: Locale): Promise<ProductDetailData | null> => {
+    const product = (await ProductRepository.findBySlug(slugOrId)) ?? (UUID.test(slugOrId) ? await ProductRepository.findById(slugOrId) : null);
 
     if (!product || !product.active) return null;
 
@@ -159,6 +165,12 @@ export const CatalogService = {
       categoryId: product.categoryId,
       categorySlug: product.category?.slug ?? null,
     };
+  },
+
+  // Every product a visitor can open, for sitemap.xml.
+  allForSitemap: async () => {
+    const rows = await ProductRepository.findMany({}, "newest", 5000, 0);
+    return rows.map((row) => ({ slug: row.slug, updatedAt: row.updatedAt }));
   },
 
   related: async (productId: string, categoryId: string | null, limit: number, locale: Locale) => {
@@ -185,6 +197,7 @@ export const CatalogService = {
 
       lines.push({
         productId,
+        slug: product.slug,
         variantId: variant?.id ?? null,
         name: localized(locale, product.name, product.nameFr),
         variantName: variant?.name ?? null,

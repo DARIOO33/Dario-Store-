@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "next build",
+    "postbuild": "node scripts/prepare-standalone.mjs",
     "composer:deploy": "prisma deploy module.ts",
     "composer:dev": "prisma dev module.ts",
     "contract:emit": "prisma contract emit",
@@ -21,9 +22,12 @@
     "migration:show": "prisma migration show",
     "migration:status": "prisma migration status",
     "start": "next start",
+    "start:prod": "node --env-file-if-exists=.env .next/standalone/server.js",
     "typecheck": "tsc --noEmit",
     "seed:store": "tsx src/prisma/seed-store.ts",
-    "chat:encrypt": "tsx src/prisma/encrypt-chat.ts"
+    "chat:encrypt": "tsx src/prisma/encrypt-chat.ts",
+    "chat:move-images": "tsx src/prisma/move-chat-images.ts",
+    "check:ready": "tsx src/prisma/check-ready.ts"
   },
   "dependencies": {
     "@fontsource-variable/instrument-sans": "^5.3.0",
@@ -34,6 +38,7 @@
     "@prisma/orm-postgres": "8.0.0-rc.11",
     "alchemy": "2.0.0-beta.74",
     "better-auth": "^1.7.5",
+    "cloudinary": "^2.11.0",
     "next": "16.1.6",
     "nodemailer": "^10.0.10",
     "react": "19.2.3",

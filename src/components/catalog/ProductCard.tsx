@@ -8,7 +8,7 @@ import { getT } from "@/src/i18n/server";
 
 export default async function ProductCard({ product }: { product: ProductCardData }) {
   const t = await getT();
-  const href = `/products/${product.id}`;
+  const href = `/products/${product.slug}`;
 
   return (
     <article className="pcard" data-tilt>
