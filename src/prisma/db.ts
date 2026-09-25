@@ -18,11 +18,20 @@ function loadComposerDatabase() {
   }
 }
 
-export const db =
-  loadComposerDatabase() ??
-  (process.env.DATABASE_URL
-    ? postgres<Contract>({ contractJson, url: process.env.DATABASE_URL })
-    : postgres<Contract>({ contractJson }));
+function createDatabase() {
+  return (
+    loadComposerDatabase() ??
+    (process.env.DATABASE_URL
+      ? postgres<Contract>({ contractJson, url: process.env.DATABASE_URL, poolOptions: { idleTimeoutMillis: 10_000 } })
+      : postgres<Contract>({ contractJson }))
+  );
+}
+
+// Next bundles this file more than once (pages, server actions, /api routes). Keeping the client on
+// globalThis gives one connection pool per server process instead of one per copy, which is what
+// exhausted the database's connections ("EMAXCONN max client connections reached") in production.
+const shared = globalThis as typeof globalThis & { database?: ReturnType<typeof createDatabase> };
+export const db = (shared.database ??= createDatabase());
 
 let connection: Promise<void> | undefined;
 

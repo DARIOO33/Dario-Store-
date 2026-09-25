@@ -6,9 +6,15 @@ import { sendEmail } from "./email";
 import { verificationCodeEmail } from "./email-templates";
 import { getLocale } from "../i18n/server";
 
-const database = new Pool({
+// Next bundles this file more than once (pages and /api routes), so the pool lives on globalThis:
+// one small pool per server process instead of one per copy, or the database runs out of
+// connections ("EMAXCONN max client connections reached").
+const shared = globalThis as typeof globalThis & { authPool?: Pool };
+const database = (shared.authPool ??= new Pool({
   connectionString: process.env.DATABASE_URL,
-});
+  max: 5,
+  idleTimeoutMillis: 10_000,
+}));
 
 export const auth = betterAuth({
   database,
