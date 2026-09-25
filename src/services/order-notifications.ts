@@ -10,7 +10,9 @@ import { paymentLabel } from "../lib/payments";
 import { formatMillimes } from "../lib/money";
 import { UserRepository } from "../prisma/users";
 import { maskEmail } from "../lib/mask";
-import { isSupportOnline, siteUrl, SUPPORT_HOURS } from "../lib/store";
+import { siteUrl } from "../lib/store";
+import { formatBackAt, formatResponseTime } from "../lib/availability";
+import { AvailabilityService } from "./availability";
 import { createTranslator } from "../i18n/translate";
 import { toLocale } from "../i18n/config";
 
@@ -21,11 +23,14 @@ function orderUrl(order: { id: string; guestToken: string | null }) {
   return `${siteUrl()}/order/${order.id}${order.guestToken ? `?t=${order.guestToken}` : ""}`;
 }
 
-// The sentence promising delivery: "within about an hour" while the team is online, and an
-// honest warning at night (see SUPPORT_HOURS in lib/store.ts).
-function fulfilmentText(order: OrderRow) {
+// The sentence promising delivery: the usual response time while the team is available, and an
+// honest "we're back on …" while the admin has set themselves away (see services/availability.ts).
+async function fulfilmentText(order: OrderRow) {
   const t = createTranslator(toLocale(order.locale));
-  return isSupportOnline() ? t("chatSystem.paidOnline") : t("chatSystem.paidNight", { from: SUPPORT_HOURS.from });
+  const { responseMinutes, awayUntilMs } = await AvailabilityService.current();
+  return awayUntilMs
+    ? t("chatSystem.paidAway", { date: formatBackAt(awayUntilMs, t.locale) })
+    : t("chatSystem.paidOnline", { time: formatResponseTime(responseMinutes) });
 }
 
 const hasDigitalItems = (order: OrderRow) => order.items.some((item) => item.productType === "VIRTUAL");
@@ -97,7 +102,7 @@ export const OrderNotifications = {
   paid: async (order: OrderRow) => {
     if (!hasDigitalItems(order)) return;
 
-    const fulfilment = fulfilmentText(order);
+    const fulfilment = await fulfilmentText(order);
     if (order.userId) await MessageRepository.create({ orderId: order.id, fromAdmin: true, body: fulfilment, hasImage: false });
 
     const email = paymentConfirmedEmail({ locale: toLocale(order.locale), name: order.customerName, orderNumber: order.orderNumber, orderUrl: orderUrl(order), fulfilment });

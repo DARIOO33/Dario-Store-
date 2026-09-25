@@ -15,10 +15,11 @@ import OrderSummary from "@/src/components/cart/OrderSummary";
 import { summarize } from "@/src/components/cart/totals";
 import { useCartRows } from "@/src/components/cart/useCartRows";
 import { useT } from "@/src/i18n/client";
+import type { Availability } from "@/src/lib/availability";
 
 // The whole cart page: the lines, the checkout form and the summary. Placing
 // the order sends only ids and quantities — the server prices everything.
-export default function CartView() {
+export default function CartView({ availability }: { availability: Availability }) {
   const t = useT();
   const router = useRouter();
   const { lines, setQuantity, remove } = useCart();
@@ -119,6 +120,7 @@ export default function CartView() {
           needsLogin={needsLogin}
           requiresShipping={totals.requiresShipping}
           hasVirtual={hasVirtual}
+          availability={availability}
         />
       </div>
 

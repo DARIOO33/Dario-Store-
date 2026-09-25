@@ -170,7 +170,7 @@ export const CatalogService = {
   // Every product a visitor can open, for sitemap.xml.
   allForSitemap: async () => {
     const rows = await ProductRepository.findMany({}, "newest", 5000, 0);
-    return rows.map((row) => ({ slug: row.slug, updatedAt: row.updatedAt }));
+    return rows.map((row) => ({ slug: row.slug, updatedAt: row.updatedAt, images: row.images.map((image) => image.url) }));
   },
 
   related: async (productId: string, categoryId: string | null, limit: number, locale: Locale) => {

@@ -1,16 +1,30 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { permanentRedirect } from "next/navigation";
 import { CatalogService } from "@/src/services/catalog";
 import { CategoryService } from "@/src/services/categories";
 import ProductCard from "@/src/components/catalog/ProductCard";
 import Pagination from "@/src/components/ui/Pagination";
 import EmptyState from "@/src/components/ui/EmptyState";
 import { buildQuery } from "@/src/lib/query";
-import { getLocale, getT, pageTitle } from "@/src/i18n/server";
+import type { Metadata } from "next";
+import { getLocale, getT } from "@/src/i18n/server";
+import { STORE_NAME } from "@/src/lib/store";
+import { SHARE_IMAGE } from "@/src/lib/seo";
 import type { ProductSort, ProductType } from "@/src/prisma/products";
 
 export const dynamic = "force-dynamic";
-export const generateMetadata = pageTitle("shop.title");
+type SearchParams = Promise<{ category?: string; type?: string; sort?: string; page?: string }>;
+
+// Filtered and sorted copies of the list point search engines to the plain one.
+export async function generateMetadata({ searchParams }: { searchParams: SearchParams }): Promise<Metadata> {
+  const sp = await searchParams;
+  const t = await getT();
+  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const path = `/products${page > 1 && !sp.type ? `?page=${page}` : ""}`;
+  const description = t("seo.shop", { store: STORE_NAME });
+
+  return { title: t("shop.title"), description, alternates: { canonical: path }, openGraph: { type: "website", siteName: STORE_NAME, url: path, images: SHARE_IMAGE, description } };
+}
 
 const SORTS: ProductSort[] = ["newest", "price-asc", "price-desc", "name"];
 
@@ -20,8 +34,6 @@ const TYPES: { key: ProductType | undefined; label: "all" | "physical" | "digita
   { key: "VIRTUAL", label: "digital" },
 ];
 
-type SearchParams = Promise<{ category?: string; type?: string; sort?: string; page?: string }>;
-
 export default async function ProductsPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
   const locale = await getLocale();
@@ -29,7 +41,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
 
   // A category has its own page; old links with ?category= land there.
   if (sp.category && (await CategoryService.getBySlug(sp.category, locale))) {
-    redirect(`/c/${sp.category}${buildQuery({ sort: sp.sort, page: sp.page })}`);
+    permanentRedirect(`/c/${sp.category}${buildQuery({ sort: sp.sort, page: sp.page })}`);
   }
   const type: ProductType | undefined = sp.type === "PHYSICAL" || sp.type === "VIRTUAL" ? sp.type : undefined;
   const sort = SORTS.find((s) => s === sp.sort) ?? "newest";
@@ -71,7 +83,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
               {t("shop.allCategories")}
             </Link>
             {categories.map((c) => (
-              <Link key={c.id} href={href({ category: c.slug, page: undefined })} className={`chip${sp.category === c.slug ? " active" : ""}`}>
+              <Link key={c.id} href={`/c/${c.slug}${buildQuery({ sort: sort === "newest" ? undefined : sort })}`} className={`chip${sp.category === c.slug ? " active" : ""}`}>
                 {c.name}
               </Link>
             ))}

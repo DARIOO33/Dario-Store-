@@ -21,15 +21,10 @@ export const CONTACT = {
 export const SHIPPING_FLAT_MILLIMES = 7_000;
 export const FREE_SHIPPING_FROM_MILLIMES = 150_000;
 
-// When the team is usually online, in Tunisian time. Outside these hours a customer whose
-// payment was just confirmed is told that delivery may take longer than the usual hour.
+// The shop's clock. The live "available / away until …" status is set by the admin on the
+// dashboard (services/availability.ts); SUPPORT_HOURS are the usual hours quoted in the legal pages.
 export const SUPPORT_TIME_ZONE = "Africa/Tunis";
 export const SUPPORT_HOURS = { from: 9, to: 23 };
-
-export function isSupportOnline(at = new Date()) {
-  const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle: "h23", timeZone: SUPPORT_TIME_ZONE }).format(at));
-  return hour >= SUPPORT_HOURS.from && hour < SUPPORT_HOURS.to;
-}
 
 // Chat messages marked "contains login details" are erased this many days after they were sent.
 export const SENSITIVE_MESSAGE_DAYS = 7;

@@ -56,6 +56,10 @@
       "model": "ShipmentEvent",
       "namespace": "public"
     },
+    "supportStatus": {
+      "model": "SupportStatus",
+      "namespace": "public"
+    },
     "user": {
       "model": "User",
       "namespace": "public"
@@ -2367,6 +2371,57 @@
               "table": "shipmentEvent"
             }
           },
+          "SupportStatus": {
+            "fields": {
+              "awayUntil": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "responseMinutes": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {},
+            "storage": {
+              "fields": {
+                "awayUntil": {
+                  "column": "awayUntil"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "responseMinutes": {
+                  "column": "responseMinutes"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                }
+              },
+              "namespaceId": "public",
+              "table": "supportStatus"
+            }
+          },
           "User": {
             "fields": {
               "createdAt": {
@@ -4504,6 +4559,53 @@
               },
               "uniques": []
             },
+            "supportStatus": {
+              "checks": [
+                {
+                  "expression": "\"responseMinutes\" > 0 AND \"responseMinutes\" <= 10080",
+                  "name": "support_status_minutes_valid_50087a7a",
+                  "prefix": "support_status_minutes_valid"
+                }
+              ],
+              "columns": {
+                "awayUntil": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "responseMinutes": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 15
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [],
+              "indexes": [],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
             "user": {
               "checks": [
                 {
@@ -4715,7 +4817,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "8160b6619e54a116f65dfd23f5f65e1d772e76a0d06de7894287fbe5693d3676"
+    "storageHash": "9c996eaf75a73c826c4eaa39711a05e60de120fa93efdbe97f985fbd4b4a3a25"
   },
   "execution": {
     "executionHash": "6a16b8ff9f9533b7d48194eeb95ffffc7508d3c2a6416861ee41e024191c50f9",

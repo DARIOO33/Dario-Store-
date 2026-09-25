@@ -10,10 +10,8 @@ export type PaymentMethod = "CASH_ON_DELIVERY" | "D17" | "BINANCE_PAY" | "BANK_T
 export const ONLINE_METHODS: PaymentMethod[] = ["D17", "BINANCE_PAY", "BANK_TRANSFER", "CRYPTO"];
 
 export const CRYPTO_NETWORKS = [
-  { id: "USDT_TRC20", label: "USDT · TRON (TRC20)", address: "TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" },
-  { id: "USDT_BEP20", label: "USDT · BNB Smart Chain (BEP20)", address: "0xXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" },
-  { id: "BTC", label: "Bitcoin (BTC)", address: "bc1qxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" },
-  { id: "ETH", label: "Ethereum (ERC20)", address: "0xXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" },
+  { id: "USDT_TRC20", label: "USDT · TRON (TRC20)", address: "TTtGyrPQqHvBXz7zjG5wV1od2uncMane8u" },
+  { id: "ETH", label: "Ethereum (ERC20)", address: "0xd541d91454b054793608d508a10f10ed83443843" },
 ] as const;
 
 type Line = { label: string; value: string };
@@ -32,15 +30,15 @@ export const PAYMENT_INFO: Record<PaymentMethod, { lines: Line[] }> = {
   },
   BINANCE_PAY: {
     lines: [
-      { label: "Pay ID", value: "000000000" },
-      { label: "Name", value: "Dario Store" },
+      { label: "Pay ID", value: "817604790" },
+      { label: "Name", value: "Anouar Dario Aissaoui" },
     ],
   },
   BANK_TRANSFER: {
     lines: [
-      { label: "Bank", value: "Your bank name" },
-      { label: "RIB", value: "00 000 0000000000000 00" },
-      { label: "Holder", value: "Dario Store" },
+      { label: "Bank", value: "Biat" },
+      { label: "RIB", value: "08 031 0120540034252 80" },
+      { label: "Holder", value: "Anouar Dario Aissaoui" },
     ],
   },
   CRYPTO: {

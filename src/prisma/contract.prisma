@@ -425,3 +425,15 @@ model ShipmentEvent {
 
   @@index([shipmentId, createdAt])
 }
+
+// How fast the shop answers right now, set by the admin on the dashboard. One row (id "main").
+// If `awayUntil` is in the future the team is away until then; otherwise it answers in about
+// `responseMinutes`. Customers see it at checkout and on their order page.
+model SupportStatus {
+  id              String      @id
+  responseMinutes Int         @default(15)
+  awayUntil       Timestamptz?
+  updatedAt       Timestamptz @default(now())
+
+  @@check(expression: "\"responseMinutes\" > 0 AND \"responseMinutes\" <= 10080", name: "support_status_minutes_valid")
+}

@@ -123,7 +123,7 @@ export function orderReceivedEmail(data: ReceivedData): Email {
 
 /* ---------- 2. payment confirmed ---------- */
 
-// `online` = the team is in its usual hours (see isSupportOnline in store.ts).
+// `fulfilment` = when the order will be delivered (see fulfilmentText in services/order-notifications.ts).
 export function paymentConfirmedEmail(data: OrderEmailData & { fulfilment: string }): Email {
   const t = createTranslator(data.locale);
   const number = data.orderNumber;

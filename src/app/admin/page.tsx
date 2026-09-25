@@ -8,13 +8,16 @@ import { formatMillimes } from "@/src/lib/money";
 import { formatDateTime } from "@/src/lib/time";
 import { paymentLabel } from "@/src/lib/payments";
 import { getT } from "@/src/i18n/server";
+import { AvailabilityService } from "@/src/services/availability";
+import AvailabilityPanel from "@/src/components/admin/AvailabilityPanel";
 
 export default async function AdminDashboard() {
   const t = await getT();
-  const [stats, unread, toVerify] = await Promise.all([
+  const [stats, unread, toVerify, availability] = await Promise.all([
     StatsService.overview(),
     MessageService.unreadForAdmin(),
     OrderService.awaitingVerification(),
+    AvailabilityService.current(),
   ]);
   const unreadOrders = Object.keys(unread);
   const unreadTotal = Object.values(unread).reduce((sum, n) => sum + n, 0);
@@ -38,6 +41,8 @@ export default async function AdminDashboard() {
           + New product
         </Link>
       </header>
+
+      <AvailabilityPanel availability={availability} suggestedBackAt={AvailabilityService.nextMorning()} />
 
       {toVerify.length > 0 && (
         <section className="panel verifyPanel" aria-label="Payments to verify">

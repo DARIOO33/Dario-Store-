@@ -4,7 +4,7 @@ import { getT } from "@/src/i18n/server";
 import { LEGAL } from "@/src/i18n/legal";
 
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: LEGAL[(await getT()).locale].terms.title };
+  return { title: LEGAL[(await getT()).locale].terms.title, alternates: { canonical: "/terms" } };
 }
 
 export default function TermsPage() {

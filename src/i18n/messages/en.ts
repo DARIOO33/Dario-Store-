@@ -437,9 +437,19 @@ export const en = {
       "change-email": "Confirm your new email",
     },
   },
+  seo: {
+    product: "Buy {name} in Tunisia for {price} at {store}. Fast delivery, secure payment and a private chat with the shop.",
+    category: "{name} in Tunisia at {store}: prices in Tunisian dinar, fast delivery and secure payment.",
+    shop: "Every product at {store}: game accounts, game keys, mobile game coins, subscriptions and IEMs, with prices in Tunisian dinar.",
+    categories: "Browse {store} by category: game accounts, game keys, mobile game coins, subscriptions and IEMs in Tunisia.",
+  },
+  availability: {
+    online: "We're online — average response time: {time}.",
+    away: "We're away right now and back on {date} (Tunisia time). You can still order: we'll handle it as soon as we're back.",
+  },
   chatSystem: {
-    paidOnline: "Payment confirmed — thank you! Your order will be delivered within about an hour, as soon as our team is available.",
-    paidNight: "Payment confirmed — thank you! It's night-time in Tunisia and our team is offline (we're back from {from}:00). Your order will be delivered as soon as we're back, so it may take longer than usual.",
+    paidOnline: "Payment confirmed — thank you! We're online (average response time: {time}), so your order will be delivered shortly.",
+    paidAway: "Payment confirmed — thank you! Our team is away right now and back on {date} (Tunisia time). Your order will be delivered as soon as we're back.",
     deliveredEmail: "Your order was sent to {email}. Check your inbox (and your spam folder).",
     paymentSent: "Payment sent — please verify.",
     newProofRequested: "We couldn't verify your payment yet. Please upload a clear proof (screenshot or photo) and tap “Payment sent” again.",

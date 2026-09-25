@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { CatalogService } from "@/src/services/catalog";
 import { CategoryService } from "@/src/services/categories";
@@ -9,8 +10,13 @@ import Price from "@/src/components/ui/Price";
 import { formatAmount } from "@/src/lib/money";
 import { availableMethodsText } from "@/src/lib/payments";
 import { getLocale, getT } from "@/src/i18n/server";
+import JsonLd from "@/src/components/seo/JsonLd";
+import { storeJsonLd } from "@/src/lib/seo";
+import { STORE_NAME } from "@/src/lib/store";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 export default async function HomePage() {
   const locale = await getLocale();
@@ -34,6 +40,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <JsonLd data={storeJsonLd(t("store.description", { name: STORE_NAME }))} />
       <section className="hero">
         <div className="wrap heroGrid">
           <div className="heroText">

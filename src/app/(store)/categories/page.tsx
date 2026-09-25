@@ -1,10 +1,17 @@
 import { CategoryService } from "@/src/services/categories";
 import EmptyState from "@/src/components/ui/EmptyState";
 import CategoryTile from "@/src/components/catalog/CategoryTile";
-import { getLocale, getT, pageTitle } from "@/src/i18n/server";
+import type { Metadata } from "next";
+import { getLocale, getT } from "@/src/i18n/server";
+import { STORE_NAME } from "@/src/lib/store";
+import { SHARE_IMAGE } from "@/src/lib/seo";
 
 export const dynamic = "force-dynamic";
-export const generateMetadata = pageTitle("categories.title");
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  const description = t("seo.categories", { store: STORE_NAME });
+  return { title: t("categories.title"), description, alternates: { canonical: "/categories" }, openGraph: { type: "website", siteName: STORE_NAME, url: "/categories", images: SHARE_IMAGE, description } };
+}
 
 export default async function CategoriesPage() {
   const t = await getT();

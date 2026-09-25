@@ -72,8 +72,11 @@ npm run seed:store     # demo catalogue
 - Email designs live in `src/lib/email-templates.ts` (inline-styled tables, shop colours, English + French from the
   `email.*` dictionary keys). New email = a template function there + keys in both dictionaries.
 - Order-related notifications (confirmation, "payment confirmed" chat message + email, delivery email) are in
-  `src/services/order-notifications.ts`; `OrderService` calls them. The "within an hour / night delay" wording uses
-  `isSupportOnline()` and `SUPPORT_HOURS` in `src/lib/store.ts`.
+  `src/services/order-notifications.ts`; `OrderService` calls them. The "response time / away until …" wording comes
+  from `AvailabilityService` (`services/availability.ts`), which the admin sets on the dashboard; it is also shown at
+  checkout and on the order page (`availabilityText` in `lib/availability.ts`).
+- SEO: product/category pages set a canonical URL and JSON-LD (`lib/seo.ts`, `components/seo/JsonLd.tsx`). A page
+  that sets its own `openGraph` must repeat `siteName` and `images` (it replaces the root one).
 - Delivery details typed by the admin are emailed only — never store them in the database or repeat them in the chat.
 - The cart is emptied by the order page (`ClearCartAfterOrder`), not by the cart page; keep the spinner overlay in
   `CartView` up until navigation completes.

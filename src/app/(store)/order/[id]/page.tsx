@@ -10,6 +10,8 @@ import OrderItemsPanel from "@/src/components/orders/OrderItemsPanel";
 import OrderChat from "@/src/components/chat/OrderChat";
 import ClearCartAfterOrder from "@/src/components/cart/ClearCartAfterOrder";
 import { ReviewService } from "@/src/services/reviews";
+import { AvailabilityService } from "@/src/services/availability";
+import { availabilityText } from "@/src/lib/availability";
 import { formatDateTime } from "@/src/lib/time";
 import { getT, pageTitle } from "@/src/i18n/server";
 
@@ -36,7 +38,9 @@ export default async function OrderPage({ params, searchParams }: Props) {
   const isOwner = !!viewer && viewer.id === order.userId;
   const isAdmin = viewer?.role === "ADMIN";
   const canChat = isOwner || (isAdmin && !!order.userId);
-  const reviewLinks = await ReviewService.reviewLinksForOrder(viewer, order);
+  const [reviewLinks, availability] = await Promise.all([ReviewService.reviewLinksForOrder(viewer, order), AvailabilityService.current()]);
+  // Only while the order still waits for the shop (payment to check, or delivery to make).
+  const waitingForShop = order.paymentMethod !== "CASH_ON_DELIVERY" && (order.status === "PENDING" || order.status === "PAID");
 
   return (
     <div className="wrap pageTop">
@@ -91,6 +95,8 @@ export default async function OrderPage({ params, searchParams }: Props) {
             totalMillimes={order.totalMillimes}
             showInstructions
           />
+
+          {waitingForShop && <p className="deliveryNote">{availabilityText(t, availability)}</p>}
 
           <section className="panel">
             <h2>{t("order.contact")}</h2>

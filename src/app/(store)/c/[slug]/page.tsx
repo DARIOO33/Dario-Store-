@@ -8,6 +8,9 @@ import Pagination from "@/src/components/ui/Pagination";
 import EmptyState from "@/src/components/ui/EmptyState";
 import { buildQuery } from "@/src/lib/query";
 import { getLocale, getT } from "@/src/i18n/server";
+import { STORE_NAME } from "@/src/lib/store";
+import JsonLd from "@/src/components/seo/JsonLd";
+import { breadcrumbJsonLd, metaDescription, SHARE_IMAGE } from "@/src/lib/seo";
 import type { ProductSort } from "@/src/prisma/products";
 
 export const dynamic = "force-dynamic";
@@ -19,11 +22,23 @@ type Props = {
   searchParams: Promise<{ sort?: string; page?: string }>;
 };
 
-export async function generateMetadata({ params }: Pick<Props, "params">): Promise<Metadata> {
-  const { slug } = await params;
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
+  const [{ slug }, sp] = await Promise.all([params, searchParams]);
+  const t = await getT();
   const category = await CategoryService.getBySlug(slug, await getLocale());
+  if (!category) return { title: t("category.notFound"), robots: { index: false } };
 
-  return category ? { title: category.name, description: category.blurb || undefined } : { title: (await getT())("category.notFound") };
+  // Sorted copies of the list point search engines to the plain one; each page number is its own page.
+  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+  const path = `/c/${slug}${page > 1 ? `?page=${page}` : ""}`;
+  const description = metaDescription(category.blurb || t("seo.category", { name: category.name, store: STORE_NAME }));
+
+  return {
+    title: category.name,
+    description,
+    alternates: { canonical: path },
+    openGraph: { type: "website", siteName: STORE_NAME, url: path, images: SHARE_IMAGE, title: category.name, description },
+  };
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
@@ -42,6 +57,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
   return (
     <div className="wrap pageTop">
+      <JsonLd data={breadcrumbJsonLd([{ name: t("product.shop"), path: "/products" }, { name: category.name, path: `/c/${slug}` }])} />
       <header className="pageHead">
         <span className="eyebrow">{t("category.eyebrow")}</span>
         <h1>{category.name}</h1>

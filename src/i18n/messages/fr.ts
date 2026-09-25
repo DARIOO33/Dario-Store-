@@ -435,9 +435,19 @@ export const fr: Messages = {
       "change-email": "Confirmez votre nouvel e-mail",
     },
   },
+  seo: {
+    product: "Achetez {name} en Tunisie à {price} chez {store}. Livraison rapide, paiement sécurisé et chat privé avec la boutique.",
+    category: "{name} en Tunisie chez {store} : prix en dinar tunisien, livraison rapide et paiement sécurisé.",
+    shop: "Tous les produits de {store} : comptes de jeux, clés de jeux, pièces de jeux mobiles, abonnements et IEM, avec des prix en dinar tunisien.",
+    categories: "Parcourez {store} par catégorie : comptes de jeux, clés de jeux, pièces de jeux mobiles, abonnements et IEM en Tunisie.",
+  },
+  availability: {
+    online: "Nous sommes en ligne — temps de réponse moyen : {time}.",
+    away: "Nous sommes absents pour le moment et revenons le {date} (heure de Tunisie). Vous pouvez quand même commander : nous traiterons votre commande dès notre retour.",
+  },
   chatSystem: {
-    paidOnline: "Paiement confirmé — merci ! Votre commande sera livrée dans environ une heure, dès que notre équipe est disponible.",
-    paidNight: "Paiement confirmé — merci ! Il fait nuit en Tunisie et notre équipe est hors ligne (nous revenons à partir de {from}h00). Votre commande sera livrée dès notre retour, cela peut donc prendre plus de temps que d'habitude.",
+    paidOnline: "Paiement confirmé — merci ! Nous sommes en ligne (temps de réponse moyen : {time}), votre commande sera livrée très bientôt.",
+    paidAway: "Paiement confirmé — merci ! Notre équipe est absente pour le moment et revient le {date} (heure de Tunisie). Votre commande sera livrée dès notre retour.",
     deliveredEmail: "Votre commande a été envoyée à {email}. Vérifiez votre boîte de réception (et vos spams).",
     paymentSent: "Paiement envoyé — merci de vérifier.",
     newProofRequested: "Nous n'avons pas encore pu vérifier votre paiement. Merci d'envoyer une preuve claire (capture d'écran ou photo) puis d'appuyer à nouveau sur « Paiement envoyé ».",

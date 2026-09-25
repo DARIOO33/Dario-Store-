@@ -5,10 +5,14 @@ import ProductCard from "@/src/components/catalog/ProductCard";
 import Pagination from "@/src/components/ui/Pagination";
 import EmptyState from "@/src/components/ui/EmptyState";
 import { buildQuery } from "@/src/lib/query";
-import { getLocale, getT, pageTitle } from "@/src/i18n/server";
+import type { Metadata } from "next";
+import { getLocale, getT } from "@/src/i18n/server";
 
 export const dynamic = "force-dynamic";
-export const generateMetadata = pageTitle("search.title");
+// Result pages are thin copies of the shop: keep them out of Google, but follow their links.
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getT())("search.title"), robots: { index: false, follow: true } };
+}
 
 type SearchParams = Promise<{ q?: string; page?: string }>;
 

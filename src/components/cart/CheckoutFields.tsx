@@ -2,6 +2,7 @@ import Link from "next/link";
 import { GOVERNORATES } from "@/src/lib/store";
 import { rememberAfterLogin } from "@/src/lib/after-login";
 import { AVAILABLE_CRYPTO_NETWORKS, AVAILABLE_ONLINE_METHODS, paymentHint, paymentLabel, type PaymentMethod } from "@/src/lib/payments";
+import { availabilityText, type Availability } from "@/src/lib/availability";
 import { useT } from "@/src/i18n/client";
 
 export type CheckoutForm = {
@@ -26,11 +27,13 @@ type Props = {
   needsLogin: boolean;
   requiresShipping: boolean;
   hasVirtual: boolean;
+  // How fast the shop answers right now (set by the admin).
+  availability: Availability;
 };
 
 // The checkout form. What it asks for depends on the cart: an address only for
 // physical items, and an online payment method (with an account) for digital ones.
-export default function CheckoutFields({ form, onChange, onSubmit, error, signedIn, needsLogin, requiresShipping, hasVirtual }: Props) {
+export default function CheckoutFields({ form, onChange, onSubmit, error, signedIn, needsLogin, requiresShipping, hasVirtual, availability }: Props) {
   const t = useT();
   const needsPayment = hasVirtual && signedIn;
   const rememberCart = () => rememberAfterLogin("/cart");
@@ -137,6 +140,7 @@ export default function CheckoutFields({ form, onChange, onSubmit, error, signed
               ? paymentHint(t, form.paymentMethod as PaymentMethod)
               : t("checkout.paymentDefaultHint")}
           </p>
+          <p className="deliveryNote">{availabilityText(t, availability)}</p>
         </fieldset>
       ) : (
         !hasVirtual && (
