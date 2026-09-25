@@ -18,6 +18,7 @@ npm run check:ready    # launch checklist (also printed at server start by src/i
 npm run start:prod     # standalone production server (after npm run build)
 npm run typecheck      # tsc --noEmit   (ignore stale errors under .next/, they regenerate on build)
 npm run lint           # eslint, must be clean (warnings count as failures)
+npm test               # Vitest unit tests (npm run test:watch while working)
 npm run build          # production build; always read its real exit code, don't pipe it
 npm run contract:emit  # after ANY edit to src/prisma/contract.prisma
 npm run db:update      # after contract:emit; destructive steps need `-- --confirm membership`
@@ -107,9 +108,13 @@ npm run seed:store     # demo catalogue
 - The owner has rejected three earlier designs as too loud / generic / "AI-looking": don't restyle globally
   without being asked.
 
-## Testing (there is no test suite)
+## Testing
 
-- `typecheck` + `lint` + `build` must pass.
+- `typecheck` + `lint` + `test` + `build` must pass.
+- Unit tests (Vitest, `*.test.ts(x)` next to the code, config in `vitest.config.mts`) never touch the database:
+  service tests `vi.mock` the repositories (see `services/messages.test.ts`); component tests start with
+  `// @vitest-environment jsdom` and render through `renderWithLocale` (`src/test/render.tsx`).
+  So far only the chat is covered.
 - For UI/flow checks drive the real app with Playwright against **`npm run build && npm start` on port 3000**,
   not `next dev` (dev compiles lazily and multi-page scripts get flaky). Stop your server afterwards and never
   delete `.next/dev/lock` — the owner runs their own dev server.

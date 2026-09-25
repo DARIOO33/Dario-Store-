@@ -1,0 +1,165 @@
+================================================================
+ Dario Store: chat unit tests, detailed log
+ Date:     2026-09-25 23:52:32 CET
+ Branch:   main @ 79498cf (tests not committed yet)
+ Node:     v24.20.0   npm: 11.19.0
+ Vitest:   vitest/5.0.2 linux-x64 node-v24.20.0   React Testing Library: 16.3.3   jsdom: 30.1.1
+================================================================
+
+WHAT IS TESTED
+  Backend (Node environment, database mocked with vi.mock):
+    src/services/messages.test.ts   chat service: access, open, send, photos, wipe, image access, unread badges
+    src/lib/crypto.test.ts          AES-256-GCM encryption of chat text and photos
+    src/lib/image-type.test.ts      photo type detection from file bytes
+  Frontend (jsdom + React Testing Library, real English/French dictionaries):
+    src/components/chat/MessageBubble.test.tsx   one chat message
+    src/components/chat/PaymentBar.test.tsx      payment banner + Payment sent button
+  Not covered: useOrderChat (polling + server actions) and the full OrderChat screen (better in Playwright).
+
+----------------------------------------------------------------
+1. UNIT TESTS: npx vitest run --reporter=verbose
+----------------------------------------------------------------
+
+ RUN  v5.0.2 /home/dario/Documents/dev/membership
+
+ ✓ src/services/messages.test.ts > who can use a chat > lets the order's owner open it 18ms
+ ✓ src/services/messages.test.ts > who can use a chat > lets an admin open it as the store 4ms
+ ✓ src/services/messages.test.ts > who can use a chat > refuses guests, other customers and customers pretending to be the store 8ms
+ ✓ src/services/messages.test.ts > who can use a chat > refuses an order that doesn't exist 2ms
+ ✓ src/services/messages.test.ts > opening a chat > marks the other side's messages as read 3ms
+ ✓ src/services/messages.test.ts > opening a chat > shows the staff member's name to admins only 9ms
+ ✓ src/services/messages.test.ts > opening a chat > lets the customer mark an online payment as sent while the order is pending 3ms
+ ✓ src/services/messages.test.ts > opening a chat > has no payment button for cash on delivery 2ms
+ ✓ src/services/messages.test.ts > opening a chat > lets the admin ask for a new proof once the customer said they paid 4ms
+ ✓ src/services/messages.test.ts > opening a chat > shows the stage once the order is paid 4ms
+ ✓ src/services/messages.test.ts > opening a chat > reports a cancelled order's chat as closed 2ms
+ ✓ src/services/messages.test.ts > sending a message > saves trimmed text with the sender 7ms
+ ✓ src/services/messages.test.ts > sending a message > refuses empty and too long messages 3ms
+ ✓ src/services/messages.test.ts > sending a message > refuses messages on a cancelled order 1ms
+ ✓ src/services/messages.test.ts > sending a message > slows down someone sending too many messages 21ms
+ ✓ src/services/messages.test.ts > sending a message > stores a photo with the type read from its bytes 24ms
+ ✓ src/services/messages.test.ts > sending a message > refuses photos that are not JPG/PNG/WebP, empty or too large 6ms
+ ✓ src/services/messages.test.ts > sending a message > refuses photos on cash-on-delivery orders 10ms
+ ✓ src/services/messages.test.ts > wiping login details > deletes the photo and blanks a sensitive message 1ms
+ ✓ src/services/messages.test.ts > wiping login details > won't wipe ordinary messages or messages from another order 2ms
+ ✓ src/services/messages.test.ts > getting a chat photo > gives the photo to the owner and to admins 3ms
+ ✓ src/services/messages.test.ts > getting a chat photo > gives nothing to guests or other customers 2ms
+ ✓ src/services/messages.test.ts > getting a chat photo > gives nothing when the photo can't be read 1ms
+ ✓ src/services/messages.test.ts > unread badges > counts unread store messages per order for the customer 5ms
+ ✓ src/lib/crypto.test.ts > chat text encryption > encrypts and decrypts a message with the key 12ms
+ ✓ src/lib/crypto.test.ts > chat text encryption > gives a different ciphertext each time for the same text 4ms
+ ✓ src/lib/crypto.test.ts > chat text encryption > stores plain text when no key is set 1ms
+ ✓ src/lib/crypto.test.ts > chat text encryption > passes old plaintext messages through unchanged 1ms
+ ✓ src/lib/crypto.test.ts > chat text encryption > shows the locked text when the key is wrong or missing 3ms
+ ✓ src/lib/crypto.test.ts > chat text encryption > refuses a key that is not 32 bytes 4ms
+ ✓ src/lib/crypto.test.ts > chat photo encryption > round-trips a photo's base64 3ms
+ ✓ src/lib/crypto.test.ts > chat photo encryption > returns null for a photo it cannot decrypt 2ms
+ ✓ src/lib/image-type.test.ts > sniffImageType > recognises JPEG, PNG and WebP from their first bytes 8ms
+ ✓ src/lib/image-type.test.ts > sniffImageType > rejects SVG, other RIFF files and random bytes 1ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentSentBox (customer's Payment sent button) > is hidden when the customer can't mark the payment as sent 64ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentSentBox (customer's Payment sent button) > stays disabled until a proof photo is uploaded 31ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentSentBox (customer's Payment sent button) > calls onMarkSent once the proof is there 18ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentSentBox (customer's Payment sent button) > is disabled while another action runs 8ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentBar (banner above the messages) > tells the customer the store is checking their payment 57ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentBar (banner above the messages) > lets the admin ask for a new proof 13ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentBar (banner above the messages) > shows the order's stage instead once the payment is confirmed 12ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentBar (banner above the messages) > shows nothing on a cancelled order 10ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > shows the customer's own message as theirs 136ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > labels store messages with the store name for the customer 11ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > shows admins which staff member wrote a store message 9ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > shows the photo through the private image route 17ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > hides login details until the person taps Show 48ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > deletes login details only after confirming 31ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > shows a deleted notice instead of wiped login details 10ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > speaks French when the visitor chose French 20ms
+
+ Test Files  5 passed (5)
+      Tests  50 passed (50)
+   Start at  23:52:36
+   Duration  4.26s (environment 55%, setup 20%, transform 14%, tests 7%, import 3%, worker 1%)
+
+    Isolate  5 workers spawned · ~1.50s startup each (spawn + environment, per file)
+             at least ~1.00s faster with isolate: false — reuses workers across files instead of one per file
+
+exit code: 0
+
+----------------------------------------------------------------
+2. MUTATION CHECK: do the tests catch a real bug?
+   Temporary change in src/services/messages.ts (accessFor):
+     - const allowed = asAdmin ? viewer.role === "ADMIN" : order.userId === viewer.id;
+     + const allowed = asAdmin ? viewer.role === "ADMIN" : true;   // any customer can open any chat
+   Expected: at least one test fails.
+----------------------------------------------------------------
+ ✓ src/services/messages.test.ts > who can use a chat > lets the order's owner open it 9ms
+ ✓ src/services/messages.test.ts > who can use a chat > lets an admin open it as the store 1ms
+ × src/services/messages.test.ts > who can use a chat > refuses guests, other customers and customers pretending to be the store 23ms
+ ✓ src/services/messages.test.ts > who can use a chat > refuses an order that doesn't exist 1ms
+ ✓ src/services/messages.test.ts > opening a chat > marks the other side's messages as read 2ms
+ ✓ src/services/messages.test.ts > opening a chat > shows the staff member's name to admins only 2ms
+ ✓ src/services/messages.test.ts > opening a chat > lets the customer mark an online payment as sent while the order is pending 1ms
+ ✓ src/services/messages.test.ts > opening a chat > has no payment button for cash on delivery 1ms
+ ✓ src/services/messages.test.ts > opening a chat > lets the admin ask for a new proof once the customer said they paid 2ms
+ ✓ src/services/messages.test.ts > opening a chat > shows the stage once the order is paid 1ms
+ ✓ src/services/messages.test.ts > opening a chat > reports a cancelled order's chat as closed 1ms
+ ✓ src/services/messages.test.ts > sending a message > saves trimmed text with the sender 1ms
+ ✓ src/services/messages.test.ts > sending a message > refuses empty and too long messages 1ms
+ ✓ src/services/messages.test.ts > sending a message > refuses messages on a cancelled order 1ms
+ ✓ src/services/messages.test.ts > sending a message > slows down someone sending too many messages 1ms
+ ✓ src/services/messages.test.ts > sending a message > stores a photo with the type read from its bytes 2ms
+ ✓ src/services/messages.test.ts > sending a message > refuses photos that are not JPG/PNG/WebP, empty or too large 1ms
+ ✓ src/services/messages.test.ts > sending a message > refuses photos on cash-on-delivery orders 1ms
+ ✓ src/services/messages.test.ts > wiping login details > deletes the photo and blanks a sensitive message 1ms
+ ✓ src/services/messages.test.ts > wiping login details > won't wipe ordinary messages or messages from another order 1ms
+ ✓ src/services/messages.test.ts > getting a chat photo > gives the photo to the owner and to admins 4ms
+ ✓ src/services/messages.test.ts > getting a chat photo > gives nothing to guests or other customers 1ms
+ ✓ src/services/messages.test.ts > getting a chat photo > gives nothing when the photo can't be read 1ms
+ ✓ src/services/messages.test.ts > unread badges > counts unread store messages per order for the customer 1ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/services/messages.test.ts > who can use a chat > refuses guests, other customers and customers pretending to be the store
+AssertionError: promise resolved "{ messages: [], closed: false, …(1) }" instead of rejecting
+      Tests  1 failed | 23 passed (24)
+   Change reverted. git diff on src/services/messages.ts: none (file restored)
+
+----------------------------------------------------------------
+3. TYPECHECK: npm run typecheck
+----------------------------------------------------------------
+
+> membership@0.1.0 typecheck
+> tsc --noEmit
+
+exit code: 0
+
+----------------------------------------------------------------
+4. LINT: npm run lint
+----------------------------------------------------------------
+
+> membership@0.1.0 lint
+> eslint
+
+exit code: 0
+
+----------------------------------------------------------------
+5. PRODUCTION BUILD: npm run build (last 12 lines)
+----------------------------------------------------------------
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+> membership@0.1.0 postbuild
+> node scripts/prepare-standalone.mjs
+
+standalone server ready: npm run start:prod
+exit code: 0
+
+================================================================
+SUMMARY
+  1. Unit tests      50 / 50 passed (5 files: 34 backend, 16 frontend)
+  2. Mutation check  bug caught: 1 test failed as expected; code restored
+  3. Typecheck       passed (exit 0)
+  4. Lint            passed, no warnings (exit 0)
+  5. Build           passed (exit 0)
+================================================================
