@@ -214,9 +214,9 @@
     grid-template-columns: 1fr;
   }
 
+  /* Below the form, so the "Place order" button is right where the customer finishes typing. */
   .cartSide {
     position: static;
-    order: -1;
   }
 }
 
