@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import MessageBubble from "@/src/components/chat/MessageBubble";
-import PaymentBar from "@/src/components/chat/PaymentBar";
+import PaymentBar, { PaymentSentBox } from "@/src/components/chat/PaymentBar";
 import { useOrderChat } from "@/src/components/chat/useOrderChat";
 import { usePhotoAttachment } from "@/src/components/chat/usePhotoAttachment";
 import { SENSITIVE_MESSAGE_DAYS, STORE_NAME } from "@/src/lib/store";
@@ -79,7 +79,6 @@ export default function OrderChat({ orderId, asAdmin }: { orderId: string; asAdm
         closed={chat.closed}
         asAdmin={asAdmin}
         busy={chat.busy}
-        onMarkSent={chat.markSent}
         onAskNewProof={chat.askNewProof}
       />
 
@@ -131,6 +130,7 @@ export default function OrderChat({ orderId, asAdmin }: { orderId: string; asAdm
               {chat.busy ? t("chat.sending") : t("chat.send")}
             </button>
           </div>
+          {!asAdmin && <PaymentSentBox payment={chat.payment} busy={chat.busy} onMarkSent={chat.markSent} />}
           <label className="check chatSecret">
             <input type="checkbox" checked={sensitive} onChange={(e) => setSensitive(e.target.checked)} />
             <span>

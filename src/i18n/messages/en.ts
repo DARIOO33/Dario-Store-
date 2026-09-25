@@ -469,7 +469,7 @@ export const en = {
     customer: "Customer",
     paidAlready: "Paid already?",
     proofUploaded: "Your proof is uploaded. Tap the button so the store checks your payment.",
-    proofNeeded: "Attach a screenshot or photo of your payment below, then tap “Payment sent”.",
+    proofNeeded: "Attach a screenshot or photo of your payment with “+ Photo”, send it, then tap “Payment sent”.",
     paymentSentButton: "Payment sent",
     customerSaysSent: "The customer says the payment was sent",
     waitingForStore: "Payment sent — waiting for the store",

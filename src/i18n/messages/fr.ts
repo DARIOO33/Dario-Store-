@@ -467,7 +467,7 @@ export const fr: Messages = {
     customer: "Client",
     paidAlready: "Déjà payé ?",
     proofUploaded: "Votre preuve est envoyée. Appuyez sur le bouton pour que la boutique vérifie votre paiement.",
-    proofNeeded: "Joignez ci-dessous une capture d'écran ou une photo de votre paiement, puis appuyez sur « Paiement envoyé ».",
+    proofNeeded: "Joignez une capture d'écran ou une photo de votre paiement avec « + Photo », envoyez-la, puis appuyez sur « Paiement envoyé ».",
     paymentSentButton: "Paiement envoyé",
     customerSaysSent: "Le client indique que le paiement a été envoyé",
     waitingForStore: "Paiement envoyé — en attente de la boutique",

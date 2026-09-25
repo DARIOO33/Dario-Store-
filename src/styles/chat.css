@@ -197,6 +197,11 @@
   font-size: 0.85rem;
 }
 
+/* Inside the message box: a slimmer version of the banner. */
+.payBarCompose {
+  padding: 0.6rem 0.8rem;
+}
+
 .payBarDone {
   border-color: var(--green);
   background: var(--green-soft);

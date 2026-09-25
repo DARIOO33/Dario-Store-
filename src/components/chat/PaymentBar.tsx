@@ -7,32 +7,16 @@ type Props = {
   closed: boolean;
   asAdmin: boolean;
   busy: boolean;
-  onMarkSent: () => void;
   onAskNewProof: () => void;
 };
 
-// The banner above the messages: the customer's "Payment sent" button (which
-// needs a proof photo first), then, once sent, the "waiting for verification"
-// notice, which gives the admin a way to ask for a clearer proof.
-export default function PaymentBar({ payment, closed, asAdmin, busy, onMarkSent, onAskNewProof }: Props) {
+// The banner above the messages: once the payment is sent, the "waiting for
+// verification" notice, which gives the admin a way to ask for a clearer proof.
+export default function PaymentBar({ payment, closed, asAdmin, busy, onAskNewProof }: Props) {
   const t = useT();
 
   return (
     <>
-      {payment && !closed && !asAdmin && payment.canMarkSent && (
-        <div className="payBar">
-          <div>
-            <strong>{t("chat.paidAlready")}</strong>
-            <p>
-              {payment.hasProof ? t("chat.proofUploaded") : t("chat.proofNeeded")}
-            </p>
-          </div>
-          <button type="button" className="btn btnAccent" onClick={onMarkSent} disabled={busy || !payment.hasProof}>
-            {t("chat.paymentSentButton")}
-          </button>
-        </div>
-      )}
-
       {payment?.stage && !closed && (
         <div className="payBar payBarDone">
           <div>
@@ -58,5 +42,24 @@ export default function PaymentBar({ payment, closed, asAdmin, busy, onMarkSent,
         </div>
       )}
     </>
+  );
+}
+
+// The customer's "Payment sent" button (it needs a proof photo first). It sits
+// in the message box, next to the photo button, so it is easy to find on phones.
+export function PaymentSentBox({ payment, busy, onMarkSent }: { payment: ChatPayment | null; busy: boolean; onMarkSent: () => void }) {
+  const t = useT();
+  if (!payment?.canMarkSent) return null;
+
+  return (
+    <div className="payBar payBarCompose">
+      <div>
+        <strong>{t("chat.paidAlready")}</strong>
+        <p>{payment.hasProof ? t("chat.proofUploaded") : t("chat.proofNeeded")}</p>
+      </div>
+      <button type="button" className="btn btnAccent" onClick={onMarkSent} disabled={busy || !payment.hasProof}>
+        {t("chat.paymentSentButton")}
+      </button>
+    </div>
   );
 }
