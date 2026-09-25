@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dario Store — Social Studio</title>
+<style id="fontcss">
+/*@FONTS@*/
+</style>
+
+<!-- ============ Template artwork (this CSS is also embedded in every exported PNG) ============ -->
+<style id="tplcss">
+.cv{--ink:#17130f;--paper:#f3ede0;--card:#fffdf6;--orange:#ff5a1f;--yellow:#ffd400;--mint:#1fcf9f;--pink:#ff86c8;--cobalt:#2a3cff;
+  position:relative;overflow:hidden;width:var(--w);height:var(--h);background:var(--bg);color:var(--fg);
+  font-family:"Instrument Sans Variable",system-ui,sans-serif;box-sizing:border-box;text-align:left}
+.cv *{box-sizing:border-box;margin:0;padding:0}
+.cv.c-yellow{--bg:#ffd400;--fg:#17130f;--pillbg:#17130f;--pillfg:#ffd400;--dot:rgba(23,19,15,.16);--hi:#f3ede0;--acc:#ff5a1f;--ctabg:#17130f;--ctafg:#f3ede0}
+.cv.c-orange{--bg:#ff5a1f;--fg:#17130f;--pillbg:#17130f;--pillfg:#ffd400;--dot:rgba(23,19,15,.16);--hi:#f3ede0;--acc:#ffd400;--ctabg:#17130f;--ctafg:#f3ede0}
+.cv.c-mint{--bg:#1fcf9f;--fg:#17130f;--pillbg:#17130f;--pillfg:#1fcf9f;--dot:rgba(23,19,15,.16);--hi:#f3ede0;--acc:#ff5a1f;--ctabg:#17130f;--ctafg:#f3ede0}
+.cv.c-pink{--bg:#ff86c8;--fg:#17130f;--pillbg:#17130f;--pillfg:#ff86c8;--dot:rgba(23,19,15,.16);--hi:#f3ede0;--acc:#ffd400;--ctabg:#17130f;--ctafg:#f3ede0}
+.cv.c-paper{--bg:#f3ede0;--fg:#17130f;--pillbg:#17130f;--pillfg:#f3ede0;--dot:rgba(23,19,15,.13);--hi:#ffd400;--acc:#ff5a1f;--ctabg:#17130f;--ctafg:#f3ede0}
+.cv.c-ink{--bg:#17130f;--fg:#f3ede0;--pillbg:#ffd400;--pillfg:#17130f;--dot:rgba(243,237,224,.10);--hi:#ffd400;--acc:#ff5a1f;--ctabg:#ffd400;--ctafg:#17130f}
+.cv::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(var(--dot) 2.6px,transparent 3.3px);background-size:24px 24px;
+  -webkit-mask-image:linear-gradient(155deg,transparent 30%,#000 100%);mask-image:linear-gradient(155deg,transparent 30%,#000 100%)}
+.cv > *{position:absolute}
+
+.cv .mono{font-family:"JetBrains Mono Variable",ui-monospace,monospace;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.cv .disp{font-family:Anton,Impact,"Arial Narrow",sans-serif;font-weight:400;text-transform:uppercase;line-height:.88;letter-spacing:.005em;padding-top:.13em}
+.cv .cta .disp,.cv .ctaPill.disp{padding-top:0}
+.cv .fit{overflow:hidden}
+.cv .stroke{padding-right:28px;padding-bottom:16px;color:var(--hi);-webkit-text-stroke:7px var(--ink);paint-order:stroke fill;text-shadow:10px 10px 0 var(--ink)}
+.cv.c-ink .stroke{-webkit-text-stroke:0;text-shadow:none}
+.cv .pill{display:inline-block;padding:13px 26px;background:var(--pillbg);color:var(--pillfg);font-size:30px;line-height:1;white-space:nowrap}
+.cv .logo{display:block;height:74px;width:auto}
+.cv .logoChip{display:block;border:4px solid var(--ink);line-height:0}
+.cv .top{display:flex;justify-content:space-between;align-items:center;left:72px;right:72px}
+.cv .cta{left:0;right:0;bottom:0;height:150px;background:var(--ctabg);color:var(--ctafg);display:flex;align-items:center;justify-content:space-between;padding:0 72px;gap:30px}
+.cv .cta .disp{font-size:66px;line-height:1;white-space:nowrap;overflow:hidden}
+.cv .cta .mono{font-size:26px;text-align:right;line-height:1.35;opacity:.9}
+.cv .ctaPill{left:120px;right:120px;height:120px;background:var(--ctabg);color:var(--ctafg);display:flex;align-items:center;justify-content:center;font-size:44px}
+
+/* round sticker */
+.cv .sticker{display:flex;flex-direction:column;align-items:center;justify-content:center;border:6px solid var(--ink);border-radius:50%;
+  background:var(--acc);color:var(--ink);text-align:center;transform:rotate(12deg);line-height:.9}
+.cv .sticker small{font-family:"JetBrains Mono Variable",monospace;font-weight:800;letter-spacing:.12em;text-transform:uppercase;line-height:1.15}
+.cv .sticker b{font-family:Anton,Impact,sans-serif;font-weight:400;text-transform:uppercase;display:block;max-width:86%;overflow:hidden;white-space:nowrap;line-height:1.25}
+
+/* ticket card (product photo / lists) */
+.cv .ticket{background:var(--card);border:5px solid var(--ink);box-shadow:14px 14px 0 var(--ink);color:var(--ink);overflow:hidden}
+.cv .ticket::before,.cv .ticket::after{content:"";position:absolute;top:50%;width:44px;height:44px;margin-top:-22px;border-radius:50%;background:var(--bg);border:5px solid var(--ink);z-index:3}
+.cv .ticket::before{left:-27px}.cv .ticket::after{right:-27px}
+.cv .tkArt{position:absolute;left:20px;right:20px;top:20px;bottom:88px;border:4px solid var(--ink);overflow:hidden;background:var(--paper)}
+.cv .tkArt img{display:block;width:100%;height:100%;object-fit:cover}
+.cv .tkFoot{position:absolute;left:24px;right:24px;bottom:0;height:88px;display:flex;align-items:center;justify-content:space-between;font-size:24px;gap:16px;white-space:nowrap}
+.cv .tkFoot span:last-child{color:#4a4338;overflow:hidden}
+
+/* generated poster art (when there is no photo) */
+.cv .art{position:absolute;inset:0;overflow:hidden}
+.cv .art .artC{position:absolute;border-radius:50%;width:86%;aspect-ratio:1;right:-22%;top:-10%}
+.cv .art .artD{position:absolute;inset:0;background-image:radial-gradient(rgba(23,19,15,.25) 2.4px,transparent 3px);background-size:20px 20px}
+.cv .art .artT{position:absolute;left:5%;right:5%;top:26%;height:44%;display:flex;align-items:safe center;justify-content:safe center;text-align:center;color:var(--ink);overflow:hidden;
+  font-family:Anton,Impact,sans-serif;text-transform:uppercase;line-height:.9;font-size:200px}
+.cv .art .artBars{position:absolute;left:6%;bottom:5%;height:9%;display:flex;gap:4px;align-items:stretch}
+.cv .art .artBars i{display:block;background:var(--ink)}
+.cv .art .artNo{position:absolute;left:6%;top:4%;font-family:"JetBrains Mono Variable",monospace;font-weight:700;font-size:24px;letter-spacing:.12em;color:var(--ink)}
+
+.cv .bullets{list-style:none}
+.cv .bullets li{position:relative;padding-left:40px;margin-bottom:14px;font-size:32px;line-height:1.2;font-weight:700}
+.cv .bullets li::before{content:"";position:absolute;left:0;top:.35em;width:20px;height:20px;background:var(--ink)}
+.cv .stars{color:var(--acc);letter-spacing:.06em;line-height:1}
+.cv .stars .off{opacity:.25}
+.cv .bigq{font-family:Anton,Impact,sans-serif;color:var(--acc);line-height:.7;font-size:560px}
+.cv .quote{font-weight:700;line-height:1.14;overflow:hidden;display:flex;align-items:safe center}
+
+/* how-to-order rows */
+.cv .row{display:flex;align-items:stretch;border:5px solid var(--ink);background:var(--card);color:var(--ink);box-shadow:9px 9px 0 var(--ink);overflow:hidden;left:72px;right:88px}
+.cv .row .no{flex:0 0 118px;background:var(--ink);color:var(--yellow);display:flex;align-items:center;justify-content:center;font-family:Anton,Impact,sans-serif;font-size:76px}
+.cv .row .tx{flex:1;display:flex;align-items:center;padding:0 30px;font-family:Anton,Impact,sans-serif;text-transform:uppercase;line-height:.95;font-size:52px;overflow:hidden}
+
+/* price list */
+.cv .plist{display:flex;align-items:baseline;gap:14px;color:var(--ink);white-space:nowrap}
+.cv .plist .n{font-weight:800;font-size:42px;overflow:hidden;text-overflow:ellipsis;max-width:640px}
+.cv .plist .dots{flex:1;border-bottom:5px dotted var(--ink);opacity:.5;transform:translateY(-8px)}
+.cv .plist .p{font-family:Anton,Impact,sans-serif;font-size:52px}
+
+/* method cards */
+.cv .method{background:var(--card);color:var(--ink);border:5px solid var(--ink);box-shadow:9px 9px 0 var(--ink);display:flex;align-items:safe center;justify-content:safe center;text-align:center;
+  font-family:Anton,Impact,sans-serif;text-transform:uppercase;font-size:60px;line-height:.95;padding:0 20px;overflow:hidden}
+
+/* tracker (post) */
+.cv .trk{display:flex;align-items:center;gap:0}
+.cv .trk i{flex:0 0 34px;height:34px;border-radius:50%;border:5px solid var(--fg);background:transparent}
+.cv .trk i.on{background:var(--acc);border-color:var(--acc)}
+.cv .trk s{flex:1;height:5px;background:var(--fg);opacity:.5}
+
+/* tracker (story) */
+.cv .step{display:flex;align-items:center;gap:26px;height:80px;left:110px;right:110px;padding:0 24px;font-family:Anton,Impact,sans-serif;text-transform:uppercase;font-size:46px;line-height:1;opacity:.5}
+.cv .step b{flex:0 0 52px;height:52px;border-radius:50%;border:4px solid currentColor;display:flex;align-items:center;justify-content:center;font-weight:400;font-size:30px}
+.cv .step.done{opacity:1}
+.cv .step.done b{background:var(--fg);color:var(--bg)}
+.cv .step.now{opacity:1;background:var(--pillbg);color:var(--pillfg);border:5px solid var(--ink);box-shadow:8px 8px 0 var(--ink);left:90px;right:130px}
+.cv .step.now b{background:var(--pillfg);color:var(--pillbg);border-color:var(--pillfg)}
+.cv .codeChip{background:var(--card);color:var(--ink);border:5px solid var(--ink);box-shadow:8px 8px 0 var(--ink);display:flex;align-items:center;justify-content:center;font-size:46px;letter-spacing:.1em}
+
+.cv .qcard{background:var(--card);color:var(--ink);border:5px solid var(--ink);box-shadow:14px 14px 0 var(--ink);display:flex;align-items:safe center;justify-content:safe center;text-align:center;padding:40px;font-family:Anton,Impact,sans-serif;text-transform:uppercase;line-height:1;overflow:hidden}
+</style>
+
+<!-- ============ Studio interface (not part of the exported images) ============ -->
+<style id="uicss">
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:#f3ede0;color:#17130f;font-family:"Instrument Sans Variable",system-ui,sans-serif;font-size:15px;display:flex;flex-direction:column}
+button,input,select,textarea{font:inherit;color:inherit}
+.bar{display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:12px 20px;background:#17130f;color:#f3ede0}
+.bar h1{margin:0;font-family:Anton,Impact,sans-serif;font-weight:400;font-size:26px;letter-spacing:.02em;text-transform:uppercase;margin-right:auto}
+.bar h1 span{color:#ff5a1f}
+.seg{display:inline-flex;border:1.5px solid currentColor}
+.seg button{background:transparent;border:0;padding:8px 12px;cursor:pointer;font-family:"JetBrains Mono Variable",monospace;font-weight:700;font-size:12px;letter-spacing:.08em;color:inherit}
+.seg button.on{background:#f3ede0;color:#17130f}
+.btn{border:1.5px solid #17130f;background:#ffd400;color:#17130f;padding:10px 16px;cursor:pointer;font-family:"JetBrains Mono Variable",monospace;font-weight:700;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.btn:hover{background:#ff5a1f}
+.btn.alt{background:#f3ede0}
+.bar .btn{border-color:#f3ede0}
+.main{flex:1;display:grid;grid-template-columns:250px minmax(0,1fr) 330px;min-height:0}
+.side,.panel{overflow:auto;padding:16px;background:#ebe3d1}
+.side{border-right:1.5px solid #17130f}
+.panel{border-left:1.5px solid #17130f}
+.side h2,.panel h2{margin:16px 0 8px;font-family:"JetBrains Mono Variable",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#4a4338}
+.side h2:first-child,.panel h2:first-child{margin-top:0}
+.tpl{display:flex;justify-content:space-between;gap:8px;width:100%;text-align:left;padding:9px 10px;margin-bottom:6px;background:#fffdf6;border:1.5px solid #17130f;cursor:pointer}
+.tpl small{font-family:"JetBrains Mono Variable",monospace;color:#847a68;font-size:11px;white-space:nowrap}
+.tpl.on{background:#17130f;color:#f3ede0}.tpl.on small{color:#ffd400}
+.stageWrap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;overflow:auto;min-height:0}
+.stageBox{position:relative;box-shadow:0 20px 40px -20px rgba(23,19,15,.55);border:1.5px solid #17130f;background:#fff;flex:none}
+.stageBox .scale{transform-origin:top left;position:absolute;left:0;top:0}
+.hint{font-size:12.5px;color:#4a4338;margin:0;text-align:center;max-width:520px}
+.field{margin-bottom:14px}
+.field label{display:block;margin-bottom:5px;font-family:"JetBrains Mono Variable",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#4a4338;font-weight:700}
+.field input[type=text],.field textarea,.field select{width:100%;padding:9px 10px;border:1.5px solid #17130f;background:#fffdf6;border-radius:0}
+.field textarea{min-height:84px;resize:vertical}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.swatches button{width:34px;height:34px;border:2px solid #17130f;cursor:pointer;padding:0}
+.swatches button.on{outline:3px solid #ff5a1f;outline-offset:2px}
+.note{font-size:12.5px;color:#4a4338;margin:6px 0 0}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#17130f;color:#f3ede0;padding:10px 16px;font-family:"JetBrains Mono Variable",monospace;font-size:12px;letter-spacing:.06em;z-index:9}
+@media (max-width:1000px){body{height:auto}.main{grid-template-columns:1fr}.side,.panel{border:0}.stageWrap{order:-1}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <h1>Dario Store <span>✱</span> Social Studio</h1>
+  <div class="seg" id="langSeg" title="Sample texts"><button data-lang="en">EN</button><button data-lang="fr">FR</button></div>
+  <button class="btn alt" id="btnAll">All templates (ZIP)</button>
+  <button class="btn" id="btnDl">Download PNG</button>
+</header>
+<div class="main">
+  <nav class="side" id="side"></nav>
+  <section class="stageWrap"><div class="stageBox" id="stageBox"><div class="scale" id="scale"></div></div><p class="hint" id="hint"></p></section>
+  <aside class="panel" id="panel"></aside>
+</div>
+
+<script>
+"use strict";
+const LOGOS = /*@LOGOS@*/;
+const COLORS = { yellow: "#ffd400", orange: "#ff5a1f", mint: "#1fcf9f", pink: "#ff86c8", paper: "#f3ede0", ink: "#17130f" };
+
+/* ---------- small helpers ---------- */
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const br = (s) => esc(s).replace(/\n/g, "<br>");
+const lines = (s) => String(s ?? "").split("\n").map((x) => x.trim()).filter(Boolean);
+const hash = (s) => { let h = 2166136261; for (const ch of String(s)) { h = Math.imul(h ^ ch.charCodeAt(0), 16777619); } return h >>> 0; };
+const stars = (n) => `<span class="stars">${"★".repeat(n)}<span class="off">${"★".repeat(5 - n)}</span></span>`;
+
+/* logo that matches the background (the SVG files carry their own background) */
+function logo(bg, h = 74) {
+  const key = bg === "paper" ? "cream" : bg === "ink" ? "dark" : bg === "yellow" ? "yellow" : "cream";
+  const img = `<img class="logo" style="height:${h}px" src="${LOGOS[key]}" alt="Dario Store">`;
+  return ["orange", "mint", "pink"].includes(bg) ? `<span class="logoChip">${img}</span>` : img;
+}
+const topBar = (d, s, y) => `<div class="top" style="top:${y}px">${logo(d.bg)}<span class="pill mono">${esc(s.handle)}</span></div>`;
+const cta = (text, s) => `<div class="cta"><span class="disp">${esc(text)} →</span><span class="mono">${esc(s.site)}<br>${esc(s.handle)}</span></div>`;
+const ctaPill = (text, y) => `<div class="ctaPill disp" style="top:${y}px">${esc(text)} ↗</div>`;
+const sticker = (txt, size, style) => {
+  const [a, b, c] = String(txt ?? "").split("\n");
+  return `<div class="sticker" style="width:${size}px;height:${size}px;${style}">${a ? `<small style="font-size:${size * 0.095}px">${esc(a)}</small>` : ""}<b data-fit="${Math.round(size * 0.4)},${Math.round(size * 0.14)}" style="font-size:${size * 0.4}px;max-width:${size * 0.82}px">${esc(b ?? "")}</b>${c ? `<small style="font-size:${size * 0.095}px">${esc(c)}</small>` : ""}</div>`;
+};
+const fitBox = (cls, x, y, w, h, max, min, inner, extra = "") =>
+  `<div class="${cls} fit" data-fit="${max},${min}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;font-size:${max}px;${extra}">${inner}</div>`;
+
+/* poster artwork for products without a photo */
+function art(name) {
+  const spots = ["#ff5a1f", "#2a3cff", "#1fcf9f", "#ff86c8", "#ffd400"];
+  const h = hash(name || "dario");
+  const bg = spots[h % 5], second = spots[(h % 5 + 1 + ((h >>> 4) % 4)) % 5];
+  const words = String(name || "").split(/[\s—–-]+/).map((w) => w.replace(/[^\p{L}\p{N}]/gu, "")).filter((w) => w.length > 1).slice(0, 2).map((w) => w.toUpperCase().slice(0, 12));
+  let bits = h, bars = "";
+  for (let i = 0; i < 26; i++) { bits = Math.imul(bits ^ (bits >>> 15), 2246822519) >>> 0; bars += `<i style="width:${2 + (bits % 6)}px;${bits % 3 === 0 ? "background:transparent" : ""}"></i>`; }
+  return `<div class="art" style="background:${bg}"><i class="artC" style="background:${second}"></i><i class="artD"></i><span class="artNo">PASS Nº ${100 + (h % 900)}</span>
+    <div class="artT" data-fit="230,60" style="font-size:230px">${esc(words.join("\n") || "PASS").replace(/\n/g, "<br>")}</div><div class="artBars">${bars}</div></div>`;
+}
+function ticket(d, s, x, y, w, h, rot) {
+  return `<div class="ticket" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;transform:rotate(${rot}deg)">
+    <div class="tkArt">${d.photo ? `<img src="${d.photo}" alt="">` : art(d.name)}</div>
+    <div class="tkFoot mono"><span>${esc(s.site)}</span><span>${esc(d.category || "")}</span></div></div>`;
+}
+
+/* ---------- template definitions ---------- */
+const BG = { key: "bg", label: "Background", type: "color" };
+const F = (key, label, en, fr, type = "text") => ({ key, label, type, en, fr });
+const SAMPLE_CTA = { en: "Order now", fr: "Commandez" };
+
+const TEMPLATES = [
+  /* ===== Instagram posts 1080 x 1350 ===== */
+  { id: "post-product", group: "Instagram posts", name: "Product spotlight", w: 1080, h: 1350, bg: "yellow",
+    fields: [BG, F("category", "Category tag", "GAME KEYS", "CLÉS DE JEU"), F("name", "Product name", "Steam wallet code", "Carte Steam"),
+      F("priceLabel", "Price label", "from", "dès"), F("price", "Price number", "25", "25"), F("unit", "Unit", "DT", "DT"),
+      F("bullets", "3 short points (one per line)", "Instant delivery by email\nPay with D17 or crypto\nPrivate chat on every order", "Livraison instantanée par e-mail\nPayez par D17 ou crypto\nChat privé pour chaque commande", "area"),
+      F("cta", "Button text", SAMPLE_CTA.en, SAMPLE_CTA.fr), { key: "photo", label: "Product photo (optional)", type: "image" }],
+    render: (d, s) => `${topBar(d, s, 64)}
+      <div class="pill mono" style="left:72px;top:190px">${esc(d.category)}</div>
+      ${fitBox("disp", 72, 262, 936, 300, 190, 70, br(d.name))}
+      ${ticket(d, s, 72, 590, 520, 580, -4)}
+      ${sticker(`${d.priceLabel}\n${d.price}\n${d.unit}`, 310, "left:690px;top:590px")}
+      <ul class="bullets" style="left:632px;top:930px;width:380px">${lines(d.bullets).slice(0, 3).map((l) => `<li>${esc(l)}</li>`).join("")}</ul>
+      ${cta(d.cta, s)}` },
+
+  { id: "post-promo", group: "Instagram posts", name: "Promo / sale", w: 1080, h: 1350, bg: "orange",
+    fields: [BG, F("headline", "Headline", "Summer sale", "Soldes d'été"), F("big", "Big number", "-30%", "-30%"), F("sub", "Small text", "On every subscription.\nThis week only.", "Sur tous les abonnements.\nCette semaine seulement.", "area"),
+      F("badge", "Sticker (small / BIG / small)", "ends\nSUNDAY", "fin\nDIMANCHE", "area"), F("cta", "Button text", SAMPLE_CTA.en, SAMPLE_CTA.fr)],
+    render: (d, s) => `${topBar(d, s, 64)}
+      ${fitBox("disp", 72, 200, 936, 190, 160, 70, br(d.headline), "text-align:center")}
+      ${fitBox("disp stroke", 60, 400, 950, 520, 560, 200, esc(d.big), "text-align:center;line-height:.95;display:flex;align-items:safe center;justify-content:safe center")}
+      ${sticker(d.badge, 250, "left:790px;top:770px")}
+      ${fitBox("", 90, 950, 900, 200, 50, 30, br(d.sub), "text-align:center;font-weight:700;line-height:1.2")}
+      ${cta(d.cta, s)}` },
+
+  { id: "post-review", group: "Instagram posts", name: "Customer review", w: 1080, h: 1350, bg: "paper",
+    fields: [BG, F("quote", "Review text", "Fast delivery, works great. Will order again!", "Livraison rapide, ça marche parfaitement. Je recommande !", "area"),
+      F("name", "Customer name", "a***r d***o", "a***r d***o"), F("product", "Product", "Steam wallet code", "Carte Steam"),
+      { key: "stars", label: "Stars", type: "select", options: ["5", "4", "3", "2", "1"], en: "5", fr: "5" },
+      F("badge", "Badge", "Verified purchase", "Achat vérifié"), F("cta", "Button text", "See more reviews", "Voir plus d'avis")],
+    render: (d, s) => `${topBar(d, s, 64)}
+      <div class="bigq" style="left:60px;top:250px;height:300px;overflow:visible">“</div>
+      <div style="left:72px;top:470px;font-size:96px">${stars(+d.stars)}</div>
+      ${fitBox("quote", 72, 590, 936, 380, 92, 38, br(d.quote))}
+      <div class="disp" style="left:72px;top:1000px;font-size:74px;line-height:1">${esc(d.name)}</div>
+      <div style="left:72px;top:1090px;display:flex;gap:18px;align-items:center"><span class="pill mono" style="font-size:24px">${esc(d.badge)}</span><span class="mono" style="font-size:24px">${esc(d.product)}</span></div>
+      ${cta(d.cta, s)}` },
+
+  { id: "post-how", group: "Instagram posts", name: "How to order", w: 1080, h: 1350, bg: "yellow",
+    fields: [BG, F("title", "Title", "How to\norder", "Comment\ncommander", "area"), F("s1", "Step 1", "Pick what you need", "Choisissez ce qu'il vous faut"),
+      F("s2", "Step 2", "Pay by D17, Binance Pay, bank or crypto", "Payez par D17, Binance Pay, banque ou crypto"), F("s3", "Step 3", "Send your proof in the order chat", "Envoyez votre preuve dans le chat"),
+      F("s4", "Step 4", "Get it by email, or at your door", "Recevez-le par e-mail, ou chez vous"), F("cta", "Button text", SAMPLE_CTA.en, SAMPLE_CTA.fr)],
+    render: (d, s) => `${topBar(d, s, 64)}
+      ${fitBox("disp", 72, 190, 936, 330, 190, 90, br(d.title))}
+      ${[d.s1, d.s2, d.s3, d.s4].map((t, i) => `<div class="row" style="top:${545 + i * 154}px;height:132px"><div class="no">${i + 1}</div><div class="tx" data-fit="52,28" style="font-size:52px">${esc(t)}</div></div>`).join("")}
+      ${cta(d.cta, s)}` },
+
+  { id: "post-ali", group: "Instagram posts", name: "AliExpress service", w: 1080, h: 1350, bg: "ink",
+    fields: [BG, F("headline", "Headline", "Need it from AliExpress?", "Besoin d'un produit AliExpress ?"), F("statement", "Statement", "We order it.\nYou track it.", "On le commande.\nVous le suivez.", "area"),
+      F("channels", "Where to message (one per line)", "Instagram\nFacebook\nWhatsApp", "Instagram\nFacebook\nWhatsApp", "area"), F("code", "Example tracking code", "DS-7K4Q9-X2M3F", "DS-7K4Q9-X2M3F"),
+      F("trackText", "Tracking text", "Follow it step by step — no account needed", "Suivez-le étape par étape — sans compte"), F("cta", "Button text", "Track an order", "Suivre une commande")],
+    render: (d, s) => `${topBar(d, s, 64)}
+      ${fitBox("disp stroke", 72, 190, 936, 340, 170, 70, br(d.headline))}
+      ${fitBox("disp", 72, 580, 936, 190, 92, 50, br(d.statement), "line-height:1")}
+      <div style="left:72px;top:810px;display:flex;gap:16px;flex-wrap:wrap">${lines(d.channels).slice(0, 4).map((c) => `<span class="pill mono" style="background:var(--fg);color:var(--bg);font-size:28px">${esc(c)}</span>`).join("")}</div>
+      <div class="trk" style="left:72px;right:72px;top:950px">${[1, 1, 1, 1, 0, 0, 0, 0].map((on, i) => `${i ? "<s></s>" : ""}<i class="${on ? "on" : ""}"></i>`).join("")}</div>
+      <div class="mono" style="left:72px;top:1015px;font-size:30px;color:var(--hi)">${esc(d.code)}</div>
+      <div style="left:72px;top:1075px;width:936px;font-size:34px;font-weight:600;line-height:1.25">${esc(d.trackText)}</div>
+      ${cta(d.cta, s)}` },
+
+  { id: "post-list", group: "Instagram posts", name: "Price list", w: 1080, h: 1350, bg: "mint",
+    fields: [BG, F("title", "Title", "Subscriptions", "Abonnements"), F("subtitle", "Subtitle", "Prices in Tunisian dinar", "Prix en dinar tunisien"),
+      F("rows", "Rows: name | price (one per line, up to 7)", "ChatGPT Plus — 1 month | 55 DT\nClaude Pro — 1 month | 60 DT\nMidjourney Basic — 1 month | 35 DT\nPerplexity Pro — 1 year | 120 DT\nGame Pass Ultimate — 1 month | 30 DT", "ChatGPT Plus — 1 mois | 55 DT\nClaude Pro — 1 mois | 60 DT\nMidjourney Basic — 1 mois | 35 DT\nPerplexity Pro — 1 an | 120 DT\nGame Pass Ultimate — 1 mois | 30 DT", "area"),
+      F("note", "Note under the list", "Sent by email once payment is confirmed", "Envoyé par e-mail dès la confirmation du paiement"), F("cta", "Button text", SAMPLE_CTA.en, SAMPLE_CTA.fr)],
+    render: (d, s) => {
+      const rows = lines(d.rows).slice(0, 7).map((l) => l.split("|").map((x) => x.trim()));
+      const rh = Math.min(96, Math.floor(560 / Math.max(rows.length, 1)));
+      return `${topBar(d, s, 64)}
+      ${fitBox("disp", 72, 190, 936, 170, 150, 70, esc(d.title))}
+      <div class="mono" style="left:72px;top:372px;font-size:28px">${esc(d.subtitle)}</div>
+      <div class="ticket" style="left:72px;top:450px;width:920px;height:660px">
+        <div style="position:absolute;left:48px;right:48px;top:36px">${rows.map(([n, p]) => `<div class="plist" style="height:${rh}px"><span class="n">${esc(n)}</span><span class="dots"></span><span class="p">${esc(p || "")}</span></div>`).join("")}</div>
+        <div class="mono" style="position:absolute;left:48px;right:48px;bottom:26px;font-size:22px;color:#4a4338;white-space:nowrap;overflow:hidden">${esc(d.note)}</div></div>
+      ${cta(d.cta, s)}`; } },
+
+  { id: "post-news", group: "Instagram posts", name: "Announcement", w: 1080, h: 1350, bg: "pink",
+    fields: [BG, F("kicker", "Small tag", "New", "Nouveau"), F("headline", "Headline", "Back in\nstock", "De retour\nen stock", "area"), F("body", "Text", "Steam wallet codes are available again.\nOrder before they're gone.", "Les cartes Steam sont de nouveau disponibles.\nCommandez avant la rupture.", "area"),
+      F("badge", "Sticker (small / BIG / small)", "just\nIN", "vient\nD'ARRIVER", "area"), F("cta", "Button text", SAMPLE_CTA.en, SAMPLE_CTA.fr)],
+    render: (d, s) => `${topBar(d, s, 64)}
+      <div class="pill mono" style="left:72px;top:190px">${esc(d.kicker)}</div>
+      ${fitBox("disp stroke", 72, 280, 936, 560, 240, 90, br(d.headline))}
+      ${fitBox("", 72, 830, 640, 300, 50, 28, br(d.body), "font-weight:700;line-height:1.22")}
+      ${sticker(d.badge, 290, "left:720px;top:800px")}
+      ${cta(d.cta, s)}` },
+
+  { id: "post-pay", group: "Instagram posts", name: "Payment methods", w: 1080, h: 1350, bg: "yellow",
+    fields: [BG, F("title", "Title", "Pay your way", "Payez à votre façon"), F("methods", "Methods (one per line, up to 6)", "D17\nBinance Pay\nBank transfer\nCrypto", "D17\nBinance Pay\nVirement bancaire\nCrypto", "area"),
+      F("points", "Points (one per line, up to 3)", "Prices in Tunisian dinar\nA private chat on every order\nProof of payment in the chat", "Prix en dinar tunisien\nUn chat privé pour chaque commande\nPreuve de paiement dans le chat", "area"), F("cta", "Button text", SAMPLE_CTA.en, SAMPLE_CTA.fr)],
+    render: (d, s) => {
+      const m = lines(d.methods).slice(0, 6);
+      const rowsN = Math.ceil(m.length / 2), ch = Math.min(200, Math.floor(500 / rowsN) - 26);
+      return `${topBar(d, s, 64)}
+      ${fitBox("disp", 72, 190, 936, 230, 170, 80, br(d.title))}
+      ${m.map((t, i) => `<div class="method" data-fit="60,30" style="left:${72 + (i % 2) * 480}px;top:${450 + Math.floor(i / 2) * (ch + 26)}px;width:440px;height:${ch}px">${esc(t)}</div>`).join("")}
+      <ul class="bullets" style="left:72px;top:${450 + rowsN * (ch + 26) + 20}px;width:936px">${lines(d.points).slice(0, 3).map((l) => `<li>${esc(l)}</li>`).join("")}</ul>
+      ${cta(d.cta, s)}`; } },
+
+  /* ===== Stories 1080 x 1920 (keep text between the top and bottom 250px) ===== */
+  { id: "story-product", group: "Stories", name: "Product story", w: 1080, h: 1920, bg: "yellow",
+    fields: [BG, F("category", "Category tag", "GAME KEYS", "CLÉS DE JEU"), F("name", "Product name", "Steam wallet code", "Carte Steam"), F("priceLabel", "Price label", "from", "dès"),
+      F("price", "Price number", "25", "25"), F("unit", "Unit", "DT", "DT"), F("cta", "Button text", "Tap the link", "Touchez le lien"), { key: "photo", label: "Product photo (optional)", type: "image" }],
+    render: (d, s) => `${topBar(d, s, 120)}
+      <div class="pill mono" style="left:72px;top:290px">${esc(d.category)}</div>
+      ${fitBox("disp", 72, 370, 936, 330, 210, 80, br(d.name))}
+      ${ticket(d, s, 150, 740, 640, 760, 3)}
+      ${sticker(`${d.priceLabel}\n${d.price}\n${d.unit}`, 330, "left:650px;top:700px")}
+      ${ctaPill(d.cta, 1580)}` },
+
+  { id: "story-promo", group: "Stories", name: "Flash sale story", w: 1080, h: 1920, bg: "orange",
+    fields: [BG, F("headline", "Headline", "Flash sale", "Vente flash"), F("big", "Big number", "-30%", "-30%"), F("sub", "Small text", "24 hours only.\nOn all game keys.", "24 heures seulement.\nSur toutes les clés de jeu.", "area"),
+      F("badge", "Sticker (small / BIG / small)", "ends\nTONIGHT", "fin\nCE SOIR", "area"), F("cta", "Button text", "Tap the link", "Touchez le lien")],
+    render: (d, s) => `${topBar(d, s, 120)}
+      ${fitBox("disp", 72, 300, 936, 200, 170, 80, br(d.headline), "text-align:center")}
+      ${fitBox("disp stroke", 30, 540, 1020, 620, 700, 260, esc(d.big), "text-align:center;line-height:1;display:flex;align-items:safe center;justify-content:safe center")}
+      ${sticker(d.badge, 280, "left:740px;top:1010px")}
+      ${fitBox("", 90, 1340, 900, 220, 56, 32, br(d.sub), "text-align:center;font-weight:700;line-height:1.2")}
+      ${ctaPill(d.cta, 1580)}` },
+
+  { id: "story-review", group: "Stories", name: "Review story", w: 1080, h: 1920, bg: "paper",
+    fields: [BG, F("quote", "Review text", "Fast delivery, works great. Will order again!", "Livraison rapide, ça marche parfaitement. Je recommande !", "area"), F("name", "Customer name", "a***r d***o", "a***r d***o"),
+      F("product", "Product", "Steam wallet code", "Carte Steam"), { key: "stars", label: "Stars", type: "select", options: ["5", "4", "3", "2", "1"], en: "5", fr: "5" }, F("badge", "Badge", "Verified purchase", "Achat vérifié")],
+    render: (d, s) => `${topBar(d, s, 120)}
+      <div class="bigq" style="left:60px;top:300px;height:300px;overflow:visible">“</div>
+      <div style="left:72px;top:560px;font-size:110px">${stars(+d.stars)}</div>
+      ${fitBox("quote", 72, 700, 936, 560, 100, 40, br(d.quote))}
+      <div class="disp" style="left:72px;top:1310px;font-size:84px;line-height:1">${esc(d.name)}</div>
+      <div style="left:72px;top:1420px;display:flex;flex-direction:column;gap:16px;align-items:flex-start"><span class="pill mono" style="font-size:26px">${esc(d.badge)}</span><span class="mono" style="font-size:26px">${esc(d.product)}</span></div>` },
+
+  { id: "story-track", group: "Stories", name: "Order tracking", w: 1080, h: 1920, bg: "yellow",
+    fields: [BG, F("title", "Title", "Your order is on its way", "Votre commande est en route"), F("item", "Item", "Wireless earbuds", "Écouteurs sans fil"), F("code", "Tracking code", "DS-7K4Q9-X2M3F", "DS-7K4Q9-X2M3F"),
+      { key: "step", label: "Current step (1-8)", type: "select", options: ["1", "2", "3", "4", "5", "6", "7", "8"], en: "5", fr: "5" },
+      F("eta", "Estimated arrival", "Est. arrival: 12 Nov", "Arrivée estimée : 12 nov."), F("cta", "Link text", "Track it: dariostore.tn/track", "Suivi : dariostore.tn/track")],
+    steps: { en: ["Order received", "Payment confirmed", "Ordered on AliExpress", "Shipped by the seller", "On its way to Tunisia", "Arrived in Tunisia", "Out for delivery", "Delivered"],
+             fr: ["Commande reçue", "Paiement confirmé", "Commandé sur AliExpress", "Expédié par le vendeur", "En route vers la Tunisie", "Arrivé en Tunisie", "En cours de livraison", "Livré"] },
+    render: (d, s, lang) => {
+      const cur = +d.step, labels = TEMPLATES.find((t) => t.id === "story-track").steps[lang];
+      return `${topBar(d, s, 120)}
+      ${fitBox("disp", 72, 270, 936, 300, 150, 70, br(d.title))}
+      <div class="mono" style="left:72px;top:590px;font-size:30px;width:936px;white-space:nowrap;overflow:hidden">${esc(d.item)}</div>
+      <div class="codeChip mono" style="left:72px;top:650px;width:600px;height:90px">${esc(d.code)}</div>
+      ${labels.map((l, i) => `<div class="step ${i + 1 < cur ? "done" : i + 1 === cur ? "now" : ""}" style="top:${800 + i * 88}px"><b>${i + 1}</b><span>${esc(l)}</span></div>`).join("")}
+      <div class="mono" style="left:72px;right:72px;top:1530px;font-size:28px;text-align:center">${esc(d.eta)}</div>
+      <div class="mono" style="left:72px;right:72px;top:1590px;font-size:28px;text-align:center;background:var(--ink);color:var(--paper);padding:22px">${esc(d.cta)}</div>`; } },
+
+  { id: "story-ask", group: "Stories", name: "Question box", w: 1080, h: 1920, bg: "mint",
+    fields: [BG, F("headline", "Headline", "Ask me\nanything", "Posez-moi\nvos questions", "area"), F("sub", "Small text", "About accounts, keys, subscriptions or delivery", "Sur les comptes, clés, abonnements ou la livraison"),
+      F("prompt", "Prompt inside the box", "Which game or subscription do you want next?", "Quel jeu ou abonnement voulez-vous ensuite ?", "area")],
+    render: (d, s) => `${topBar(d, s, 120)}
+      ${fitBox("disp stroke", 72, 320, 936, 480, 260, 100, br(d.headline))}
+      <div class="mono" style="left:72px;top:830px;width:936px;font-size:32px;line-height:1.35">${esc(d.sub)}</div>
+      <div class="qcard" data-fit="84,40" style="left:90px;top:1000px;width:880px;height:440px;font-size:84px">${esc(d.prompt)}</div>` },
+
+  { id: "story-news", group: "Stories", name: "Announcement story", w: 1080, h: 1920, bg: "pink",
+    fields: [BG, F("kicker", "Small tag", "New", "Nouveau"), F("headline", "Headline", "Back in\nstock", "De retour\nen stock", "area"), F("body", "Text", "Steam wallet codes are available again.", "Les cartes Steam sont de nouveau disponibles."),
+      F("badge", "Sticker (small / BIG / small)", "just\nIN", "vient\nD'ARRIVER", "area"), F("cta", "Button text", "Tap the link", "Touchez le lien")],
+    render: (d, s) => `${topBar(d, s, 120)}
+      <div class="pill mono" style="left:72px;top:290px">${esc(d.kicker)}</div>
+      ${fitBox("disp stroke", 72, 380, 936, 700, 320, 110, br(d.headline))}
+      ${fitBox("", 72, 1130, 620, 260, 54, 32, br(d.body), "font-weight:700;line-height:1.2")}
+      ${sticker(d.badge, 290, "left:700px;top:1100px")}
+      ${ctaPill(d.cta, 1580)}` },
+
+  /* ===== Covers ===== */
+  { id: "cover-facebook", group: "Covers", name: "Facebook cover", w: 1640, h: 624, bg: "yellow",
+    fields: [BG, F("line1", "Main line", "Game accounts · keys · coins · subscriptions", "Comptes · clés · monnaie de jeu · abonnements"), F("line2", "Small line", "Instant delivery by email — IEMs delivered across Tunisia", "Livraison instantanée par e-mail — IEMs livrés partout en Tunisie"),
+      F("chips", "Chips (one per line)", "D17\nBinance Pay\nBank transfer\nCrypto", "D17\nBinance Pay\nVirement bancaire\nCrypto", "area")],
+    render: (d, s) => `
+      <div class="sticker" style="left:70px;top:150px;width:290px;height:290px;font-size:0"><b style="font-size:150px;max-width:none;overflow:visible">✱</b></div>
+      <div class="ticket" style="left:1300px;top:110px;width:250px;height:340px;transform:rotate(6deg)"><div class="tkArt" style="bottom:70px">${art('Dario Store')}</div><div class="tkFoot mono" style="height:70px;font-size:18px"><span>${esc(s.site)}</span></div></div>
+      <div style="left:410px;top:70px;width:820px;display:flex;flex-direction:column;align-items:center;gap:22px">${logo(d.bg, 80)}</div>
+      ${fitBox("disp", 410, 190, 820, 190, 120, 50, esc(d.line1), "text-align:center;display:flex;align-items:safe center;justify-content:safe center;line-height:.95")}
+      <div class="mono" style="left:410px;top:395px;width:820px;text-align:center;font-size:20px;line-height:1.4">${esc(d.line2)}</div>
+      <div style="left:410px;top:490px;width:820px;display:flex;justify-content:center;gap:12px;flex-wrap:wrap">${lines(d.chips).slice(0, 5).map((c) => `<span class="pill mono" style="font-size:22px;padding:11px 20px">${esc(c)}</span>`).join("")}</div>` },
+
+  { id: "highlight", group: "Covers", name: "Instagram highlight cover", w: 1080, h: 1920, bg: "yellow",
+    fields: [BG, F("word", "Word", "GAMES", "JEUX"), F("sub", "Small text", "Accounts", "Comptes")],
+    render: (d, s) => `
+      <img src="${LOGOS.mark}" alt="" style="left:410px;top:610px;width:260px;height:260px">
+      ${fitBox("disp", 130, 880, 820, 300, 300, 100, esc(d.word), "text-align:center;line-height:1;display:flex;align-items:safe center;justify-content:safe center;font-size:300px")}
+      <div class="mono" style="left:130px;top:1200px;width:820px;text-align:center;font-size:46px">${esc(d.sub)}</div>` },
+];
+
+/* ---------- state ---------- */
+const store = {
+  get(k, fallback) { try { const v = localStorage.getItem("dario-social-" + k); return v ? JSON.parse(v) : fallback; } catch { return fallback; } },
+  set(k, v) { try { localStorage.setItem("dario-social-" + k, JSON.stringify(v)); } catch { /* private mode: nothing is remembered */ } },
+};
+const state = {
+  lang: store.get("lang", "en"),
+  current: store.get("current", TEMPLATES[0].id),
+  settings: store.get("settings", { handle: "@dario.store.tn", site: "dariostore.tn" }),
+  data: {},
+};
+const saved = store.get("data", {});
+const tpl = (id) => TEMPLATES.find((t) => t.id === id);
+function sampleData(t, lang) {
+  const d = { bg: t.bg };
+  for (const f of t.fields) if (f.key !== "bg") d[f.key] = f.type === "image" ? "" : f[lang];
+  return d;
+}
+function resetTexts(lang) {
+  for (const t of TEMPLATES) {
+    const fresh = sampleData(t, lang), old = state.data[t.id] || {};
+    state.data[t.id] = { ...fresh, bg: old.bg || t.bg, photo: old.photo || "" };
+    if (t.id === "story-track" || t.id === "post-review" || t.id === "story-review") {
+      for (const f of t.fields) if (f.type === "select") state.data[t.id][f.key] = old[f.key] || f[lang];
+    }
+  }
+}
+for (const t of TEMPLATES) state.data[t.id] = { ...sampleData(t, state.lang), ...(saved[t.id] || {}), photo: "" };
+const persist = () => { const copy = {}; for (const k in state.data) copy[k] = { ...state.data[k], photo: "" }; store.set("data", copy); store.set("lang", state.lang); store.set("current", state.current); store.set("settings", state.settings); };
+
+/* ---------- rendering ---------- */
+function markup(t, d) {
+  return `<div class="cv c-${d.bg}" style="--w:${t.w}px;--h:${t.h}px">${t.render(d, state.settings, state.lang)}</div>`;
+}
+function fitAll(root) {
+  root.querySelectorAll("[data-fit]").forEach((el) => {
+    const [max, min] = el.dataset.fit.split(",").map(Number);
+    let size = max;
+    el.style.fontSize = size + "px";
+    while (size > min && (el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1)) { size -= 2; el.style.fontSize = size + "px"; }
+  });
+}
+function draw() {
+  const t = tpl(state.current);
+  const box = document.getElementById("stageBox"), scale = document.getElementById("scale");
+  scale.innerHTML = markup(t, state.data[t.id]);
+  const avail = document.querySelector(".stageWrap");
+  const k = Math.min((avail.clientWidth - 40) / t.w, (window.innerHeight - 190) / t.h, 1);
+  box.style.width = t.w * k + "px"; box.style.height = t.h * k + "px";
+  scale.style.transform = `scale(${k})`;
+  fitAll(scale);
+  document.getElementById("hint").textContent = `${t.name} — ${t.w} × ${t.h} px` + (t.h === 1920 ? " · keep important text away from the top and bottom 250 px (Instagram buttons cover them)" : "");
+}
+
+function buildSide() {
+  const side = document.getElementById("side");
+  let html = "", group = "";
+  for (const t of TEMPLATES) {
+    if (t.group !== group) { group = t.group; html += `<h2>${group}</h2>`; }
+    html += `<button class="tpl${t.id === state.current ? " on" : ""}" data-id="${t.id}">${t.name}<small>${t.w}×${t.h}</small></button>`;
+  }
+  side.innerHTML = html;
+}
+function buildPanel() {
+  const t = tpl(state.current), d = state.data[t.id], p = document.getElementById("panel");
+  let html = `<h2>${t.name}</h2>`;
+  for (const f of t.fields) {
+    if (f.type === "color") {
+      html += `<div class="field"><label>${f.label}</label><div class="swatches">${Object.entries(COLORS).map(([k, v]) => `<button data-color="${k}" title="${k}" class="${d.bg === k ? "on" : ""}" style="background:${v}"></button>`).join("")}</div></div>`;
+    } else if (f.type === "area") {
+      html += `<div class="field"><label>${f.label}</label><textarea data-key="${f.key}">${esc(d[f.key])}</textarea></div>`;
+    } else if (f.type === "select") {
+      html += `<div class="field"><label>${f.label}</label><select data-key="${f.key}">${f.options.map((o) => `<option ${o === d[f.key] ? "selected" : ""}>${o}</option>`).join("")}</select></div>`;
+    } else if (f.type === "image") {
+      html += `<div class="field"><label>${f.label}</label><input type="file" accept="image/*" data-image="${f.key}">${d.photo ? `<button class="btn alt" style="margin-top:8px" data-clearphoto>Remove photo</button>` : ""}<p class="note">Photos are not saved between visits.</p></div>`;
+    } else {
+      html += `<div class="field"><label>${f.label}</label><input type="text" data-key="${f.key}" value="${esc(d[f.key])}"></div>`;
+    }
+  }
+  html += `<h2>Your details (all templates)</h2>
+    <div class="field"><label>Instagram / Facebook handle</label><input type="text" data-setting="handle" value="${esc(state.settings.handle)}"></div>
+    <div class="field"><label>Website</label><input type="text" data-setting="site" value="${esc(state.settings.site)}"></div>
+    <button class="btn alt" data-reset>Reset this template</button>`;
+  p.innerHTML = html;
+}
+
+/* ---------- export ---------- */
+async function renderPNG(t, d) {
+  const holder = document.createElement("div");
+  holder.style.cssText = "position:fixed;left:-20000px;top:0;";
+  holder.innerHTML = markup(t, d);
+  document.body.appendChild(holder);
+  await document.fonts.ready;
+  fitAll(holder);
+  const node = holder.firstElementChild;
+  const xml = new XMLSerializer().serializeToString(node);
+  const css = document.getElementById("fontcss").textContent + document.getElementById("tplcss").textContent;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${t.w}" height="${t.h}"><foreignObject x="0" y="0" width="${t.w}" height="${t.h}"><style><![CDATA[${css}]]></style>${xml}</foreignObject></svg>`;
+  holder.remove();
+  const img = new Image();
+  const loaded = new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error("Could not render the image")); });
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  await loaded;
+  const canvas = document.createElement("canvas");
+  canvas.width = t.w; canvas.height = t.h;
+  const ctx = canvas.getContext("2d");
+  // The embedded fonts decode asynchronously inside the image: draw, wait, draw again.
+  ctx.drawImage(img, 0, 0);
+  await new Promise((r) => setTimeout(r, 250));
+  ctx.clearRect(0, 0, t.w, t.h);
+  ctx.drawImage(img, 0, 0);
+  return await new Promise((res) => canvas.toBlob(res, "image/png"));
+}
+function download(blob, name) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function toast(msg) {
+  const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2600);
+}
+
+/* minimal ZIP writer (no compression) */
+function crc32(bytes) {
+  let c, crc = ~0;
+  for (let i = 0; i < bytes.length; i++) { c = (crc ^ bytes[i]) & 0xff; for (let k = 0; k < 8; k++) c = c & 1 ? (c >>> 1) ^ 0xedb88320 : c >>> 1; crc = (crc >>> 8) ^ c; }
+  return ~crc >>> 0;
+}
+function zip(files) {
+  const enc = new TextEncoder(), parts = [], central = [];
+  let offset = 0;
+  for (const { name, bytes } of files) {
+    const n = enc.encode(name), crc = crc32(bytes);
+    const local = new DataView(new ArrayBuffer(30));
+    local.setUint32(0, 0x04034b50, true); local.setUint16(4, 20, true); local.setUint32(14, crc, true);
+    local.setUint32(18, bytes.length, true); local.setUint32(22, bytes.length, true); local.setUint16(26, n.length, true);
+    parts.push(new Uint8Array(local.buffer), n, bytes);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint32(16, crc, true);
+    c.setUint32(20, bytes.length, true); c.setUint32(24, bytes.length, true); c.setUint16(28, n.length, true); c.setUint32(42, offset, true);
+    central.push(new Uint8Array(c.buffer), n);
+    offset += 30 + n.length + bytes.length;
+  }
+  const size = central.reduce((a, b) => a + b.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true); end.setUint32(12, size, true); end.setUint32(16, offset, true);
+  return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: "application/zip" });
+}
+
+/* ---------- events ---------- */
+function shrinkImage(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const k = Math.min(1, 1400 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL("image/jpeg", 0.88));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+document.getElementById("side").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-id]"); if (!b) return;
+  state.current = b.dataset.id; persist(); buildSide(); buildPanel(); draw();
+});
+document.getElementById("panel").addEventListener("input", (e) => {
+  const t = tpl(state.current), d = state.data[t.id];
+  if (e.target.dataset.key) d[e.target.dataset.key] = e.target.value;
+  else if (e.target.dataset.setting) state.settings[e.target.dataset.setting] = e.target.value;
+  persist(); draw();
+});
+document.getElementById("panel").addEventListener("change", async (e) => {
+  const t = tpl(state.current), d = state.data[t.id];
+  if (e.target.dataset.image && e.target.files[0]) { d.photo = await shrinkImage(e.target.files[0]); buildPanel(); draw(); }
+});
+document.getElementById("panel").addEventListener("click", (e) => {
+  const t = tpl(state.current), d = state.data[t.id];
+  if (e.target.dataset.color) { d.bg = e.target.dataset.color; persist(); buildPanel(); draw(); }
+  if (e.target.dataset.clearphoto !== undefined) { d.photo = ""; buildPanel(); draw(); }
+  if (e.target.dataset.reset !== undefined) { state.data[t.id] = sampleData(t, state.lang); state.data[t.id].photo = ""; persist(); buildPanel(); draw(); }
+});
+document.getElementById("langSeg").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-lang]"); if (!b || b.dataset.lang === state.lang) return;
+  if (!confirm(b.dataset.lang === "fr" ? "Load the French sample texts? Your edited texts will be replaced." : "Load the English sample texts? Your edited texts will be replaced.")) return;
+  state.lang = b.dataset.lang; resetTexts(state.lang); persist(); syncLang(); buildPanel(); draw();
+});
+function syncLang() { document.querySelectorAll("#langSeg button").forEach((b) => b.classList.toggle("on", b.dataset.lang === state.lang)); }
+document.getElementById("btnDl").addEventListener("click", async () => {
+  const t = tpl(state.current);
+  try { download(await renderPNG(t, state.data[t.id]), `dario-${t.id}.png`); toast("PNG downloaded"); } catch (err) { toast(err.message); }
+});
+document.getElementById("btnAll").addEventListener("click", async () => {
+  const files = [];
+  for (const t of TEMPLATES) {
+    toast(`Rendering ${t.name}…`);
+    files.push({ name: `${t.group.toLowerCase().replace(/ /g, "-")}/${t.id}.png`, bytes: new Uint8Array(await (await renderPNG(t, state.data[t.id])).arrayBuffer()) });
+  }
+  download(zip(files), "dario-social-templates.zip"); toast("ZIP downloaded");
+});
+window.addEventListener("resize", draw);
+
+/* Rendering mode used to produce the ready-made PNGs:  studio.html?render=<id>&lang=fr&bg=mint&word=KEYS&sub=... */
+const q = new URLSearchParams(location.search);
+if (q.get("render")) {
+  const t = tpl(q.get("render"));
+  if (q.get("lang")) { state.lang = q.get("lang"); }
+  const d = sampleData(t, state.lang);
+  for (const [k, v] of q) if (k in d) d[k] = v;
+  state.settings = { handle: q.get("handle") || state.settings.handle, site: q.get("site") || state.settings.site };
+  document.body.innerHTML = ""; document.body.style.cssText = "display:block;background:none";
+  document.fonts.ready.then(() => {
+    const host = document.createElement("div"); host.id = "out"; host.innerHTML = markup(t, d); document.body.appendChild(host);
+    fitAll(host); host.dataset.ready = "1";
+  });
+} else {
+  syncLang(); buildSide(); buildPanel(); draw();
+}
+</script>
+</body>
+</html>

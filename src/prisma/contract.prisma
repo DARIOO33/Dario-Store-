@@ -1,21 +1,406 @@
 // use prisma-8
-
+// Contract inferred from the live database schema. Edit as needed, then run `prisma contract emit`.
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  username  String?
-  name      String?
-  posts     Post[]
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.updatedAtString()
+  id            String      @id(map: "user_pkey")
+  name          String
+  email         String      @unique(map: "user_email_key")
+  emailVerified Boolean
+  image         String?
+  role          ROLE @default(MEMBER)
+  createdAt     Timestamptz @default(now())
+  updatedAt     Timestamptz @default(now())
+  accounts      Account[]
+  sessions      Session[]
+
+  orders  Order[]
+  reviews Review[]
+  @@map("user")
 }
 
-model Post {
-  id        Int      @id @default(autoincrement())
-  title     String
-  content   String?
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  Int
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.updatedAtString()
+enum ROLE {
+  MEMBER
+  STAFF
+  ADMIN
+}
+
+model Account {
+  id                    String       @id(map: "account_pkey")
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  Timestamptz?
+  refreshTokenExpiresAt Timestamptz?
+  scope                 String?
+  password              String?
+  createdAt             Timestamptz  @default(now())
+  updatedAt             Timestamptz
+  user                  User         @relation(fields:[userId], references:[id], onDelete: Cascade, map: "account_userId_fkey")
+
+  @@index([userId], map: "account_userId_idx")
+  @@map("account")
+}
+
+model Session {
+  id        String      @id(map: "session_pkey")
+  expiresAt Timestamptz
+  token     String      @unique(map: "session_token_key")
+  createdAt Timestamptz @default(now())
+  updatedAt Timestamptz
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User        @relation(fields:[userId], references:[id], onDelete: Cascade, map: "session_userId_fkey")
+
+  @@index([userId], map: "session_userId_idx")
+  @@map("session")
+}
+
+model Verification {
+  id         String      @id(map: "verification_pkey")
+  identifier String
+  value      String
+  expiresAt  Timestamptz
+  createdAt  Timestamptz @default(now())
+  updatedAt  Timestamptz @default(now())
+
+  @@index([identifier], map: "verification_identifier_idx")
+  @@map("verification")
+}
+
+
+// ---------------------------------------------------------------------------
+// Online store (Tunisia)
+//
+// Money: the Tunisian dinar has 3 decimals (1 TND = 1000 millimes), so every
+// price is an integer number of millimes — never a float.
+// Roles: a logged-in customer is ROLE MEMBER, the store owner is ADMIN. A guest
+// has no User row: their order has a null userId plus the contact details
+// copied onto the order itself.
+// ---------------------------------------------------------------------------
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+// PHYSICAL needs a shipping address; VIRTUAL (e-books, vouchers, licences…) never does.
+// The stages of a "we order it for you from AliExpress" shipment, in order.
+enum ShipmentStatus {
+  RECEIVED
+  PAID
+  ORDERED
+  SHIPPED
+  IN_TRANSIT
+  IN_TUNISIA
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH_ON_DELIVERY
+  D17
+  BINANCE_PAY
+  BANK_TRANSFER
+  CRYPTO
+}
+
+enum ProductType {
+  PHYSICAL
+  VIRTUAL
+}
+
+model Category {
+  id        String      @id @default(uuid())
+  name      String
+  slug      String      @unique
+  // A short line shown on the category's own page and tile.
+  blurb     String      @default("")
+  // French versions; empty means "show the English one".
+  nameFr    String      @default("")
+  blurbFr   String      @default("")
+  // Pinned categories appear in the header menu, in `position` order.
+  inNav     Boolean     @default(false)
+  position  Int         @default(0)
+  createdAt Timestamptz @default(now())
+
+  products Product[]
+}
+
+model Product {
+  id            String      @id @default(uuid())
+  name          String
+  description   String      @default("")
+  // French versions; empty means "show the English one".
+  nameFr        String      @default("")
+  descriptionFr String      @default("")
+  type          ProductType @default(PHYSICAL)
+  priceMillimes Int
+  // null = unlimited (the normal case for virtual products)
+  stock         Int?
+  // `featured` is what the admin toggles to pin an item on the storefront;
+  // `active` hides an item without deleting it.
+  featured      Boolean     @default(false)
+  active        Boolean     @default(true)
+  // Totals over the visible reviews, kept up to date whenever a review changes,
+  // so product cards can show the average without an extra query.
+  ratingCount   Int         @default(0)
+  ratingSum     Int         @default(0)
+  categoryId    String?
+  createdAt     Timestamptz @default(now())
+  updatedAt     Timestamptz @default(now())
+
+  category   Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  images     ProductImage[]
+  variants   ProductVariant[]
+  orderItems OrderItem[]
+  reviews    Review[]
+
+  @@index([featured, active])
+  @@index([categoryId])
+  @@index([type])
+  @@check(expression: "\"priceMillimes\" >= 0", name: "product_price_non_negative")
+  @@check(expression: "\"stock\" IS NULL OR \"stock\" >= 0", name: "product_stock_non_negative")
+}
+
+// A choice within a product (e.g. "1 month" / "1 year", or a region). When a
+// product has variants, the variant carries the price, stock and photo, and
+// the product's own price is just the lowest variant price ("from ...").
+model ProductVariant {
+  id            String      @id @default(uuid())
+  productId     String
+  name          String
+  priceMillimes Int
+  // null = unlimited
+  stock         Int?
+  // Shown on the product page when this variant is picked.
+  imageUrl      String?
+  position      Int         @default(0)
+  active        Boolean     @default(true)
+  createdAt     Timestamptz @default(now())
+
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@index([productId])
+  @@check(expression: "\"priceMillimes\" >= 0", name: "variant_price_non_negative")
+  @@check(expression: "\"stock\" IS NULL OR \"stock\" >= 0", name: "variant_stock_non_negative")
+}
+
+model ProductImage {
+  id        String @id @default(uuid())
+  productId String
+  url       String
+  alt       String @default("")
+  // Lowest position is the cover image.
+  position  Int    @default(0)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+// Contact + shipping details are copied onto the order (not linked to the
+// user) so guest checkout works and history never changes after the fact.
+// `guestToken` lets a guest open their order without an account.
+// `requiresShipping` is true when the order contains at least one PHYSICAL
+// product; only then are the address and phone mandatory (and a shipping fee
+// charged).
+model Order {
+  id                 String      @id @default(uuid())
+  orderNumber        Int         @unique @default(autoincrement())
+  userId             String?
+  guestToken         String?     @unique
+  status             OrderStatus @default(PENDING)
+  paymentMethod      PaymentMethod @default(CASH_ON_DELIVERY)
+  cryptoNetwork      String?
+  paymentSentAt      Timestamptz?
+  currency           String      @default("TND")
+  requiresShipping   Boolean     @default(false)
+  subtotalMillimes   Int
+  shippingMillimes   Int         @default(0)
+  totalMillimes      Int
+  customerName       String
+  customerEmail      String
+  customerPhone      String?
+  shippingAddress    String?
+  shippingCity       String?
+  shippingPostalCode String?
+  shippingCountry    String?     @default("Tunisia")
+  notes              String?
+  // The language the customer was browsing in: used for emails and system chat messages.
+  locale             String      @default("en")
+  // When the admin last emailed the customer their delivery (the email itself is not stored).
+  deliveryEmailSentAt Timestamptz?
+  // When the order reached each stage (shown to the customer in the chat).
+  paidAt             Timestamptz?
+  shippedAt          Timestamptz?
+  deliveredAt        Timestamptz?
+  createdAt          Timestamptz @default(now())
+  updatedAt          Timestamptz @default(now())
+
+  user  User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items    OrderItem[]
+  messages OrderMessage[]
+  reviews  Review[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([customerEmail])
+  @@index([createdAt])
+  @@check(expression: "\"subtotalMillimes\" >= 0 AND \"shippingMillimes\" >= 0 AND \"totalMillimes\" = \"subtotalMillimes\" + \"shippingMillimes\"", name: "order_totals_consistent")
+  @@check(expression: "NOT \"requiresShipping\" OR (\"shippingAddress\" IS NOT NULL AND \"shippingCity\" IS NOT NULL AND \"customerPhone\" IS NOT NULL)", name: "order_shipping_details_present")
+  @@check(expression: "\"requiresShipping\" OR \"shippingMillimes\" = 0", name: "order_no_fee_without_shipping")
+  @@check(expression: "(\"paymentMethod\" = 'CRYPTO') = (\"cryptoNetwork\" IS NOT NULL)", name: "order_crypto_network_matches_method")
+}
+
+// One line of the private chat between the customer and the store about an
+// order. Only the order's owner and admins can read or write it. A message can
+// carry one photo (e.g. a payment proof), stored in MessageImage.
+model OrderMessage {
+  id        String       @id @default(uuid())
+  orderId   String
+  fromAdmin Boolean      @default(false)
+  body      String       @default("")
+  hasImage  Boolean      @default(false)
+  // Login details (a game account, a password...): shown hidden by default and wiped after a few days.
+  sensitive Boolean      @default(false)
+  wipedAt   Timestamptz?
+  readAt    Timestamptz?
+  createdAt Timestamptz  @default(now())
+
+  order Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  image MessageImage?
+
+  @@index([orderId, createdAt])
+  // Unread badges (admin menu, "My orders") and the automatic erase of old login details.
+  @@index([fromAdmin, readAt])
+  @@index([sensitive, wipedAt])
+  // `body` holds encrypted text (see lib/crypto.ts), which is longer than what was typed: the 1000-character
+  // limit for typed messages is enforced in services/messages.ts.
+  @@check(expression: "char_length(\"body\") <= 8000 AND (char_length(\"body\") >= 1 OR \"hasImage\" OR \"wipedAt\" IS NOT NULL)", name: "order_message_content_valid")
+}
+
+// The photo itself, base64-encoded (the contract has no binary type).
+model MessageImage {
+  id        String      @id @default(uuid())
+  messageId String      @unique
+  mimeType  String
+  sizeBytes Int
+  dataBase64 String
+  createdAt Timestamptz @default(now())
+
+  message OrderMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@check(expression: "\"sizeBytes\" > 0 AND \"sizeBytes\" <= 5242880", name: "message_image_size_limit")
+}
+
+model OrderItem {
+  id                String      @id @default(uuid())
+  orderId           String
+  productId         String?
+  variantId         String?
+  productName       String
+  variantName       String?
+  productType       ProductType
+  unitPriceMillimes Int
+  quantity          Int
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@unique([orderId, productId, variantId])
+  @@index([orderId])
+  @@index([productId])
+  @@index([variantId])
+  @@check(expression: "\"quantity\" > 0", name: "order_item_quantity_positive")
+  @@check(expression: "\"unitPriceMillimes\" >= 0", name: "order_item_price_non_negative")
+}
+
+// A customer's review of a product they bought (one per customer per product).
+// `authorName` is what is shown: the full name, or a masked one ("a***r d***o")
+// when the customer ticked "hide my name" — the mask is applied when the review
+// is saved, so the database never keeps the full name for hidden reviews.
+model Review {
+  id             String       @id @default(uuid())
+  productId      String
+  userId         String?
+  // The paid order that proves the purchase.
+  orderId        String?
+  authorName     String
+  hideName       Boolean      @default(false)
+  // Which option they bought (e.g. "3 months"), copied from the order.
+  variantName    String?
+  rating         Int
+  message        String       @default("")
+  // Set by an admin to take a review off the shop without deleting it.
+  hidden         Boolean      @default(false)
+  adminReply     String?
+  adminRepliedAt Timestamptz?
+  createdAt      Timestamptz  @default(now())
+  updatedAt      Timestamptz  @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@unique([productId, userId])
+  @@index([productId, hidden, createdAt])
+  @@index([userId])
+  @@check(expression: "\"rating\" BETWEEN 1 AND 5", name: "review_rating_range")
+  @@check(expression: "char_length(\"message\") <= 1000", name: "review_message_length")
+}
+
+// An item we order from AliExpress for a customer who contacted us on
+// Instagram / Facebook / WhatsApp. The customer follows it on the public page
+// /track/<trackingCode>, which only ever shows a masked version of the contact
+// details. `adminNotes`, `itemUrl` and `contactChannel` are never shown publicly.
+model Shipment {
+  id                    String         @id @default(uuid())
+  reference             Int            @unique @default(autoincrement())
+  // The unguessable code in the tracking link, e.g. DS-7K4Q9-X2M3F.
+  trackingCode          String         @unique
+  customerName          String
+  customerPhone         String?
+  customerAddress       String?
+  customerCity          String?
+  contactChannel        String?
+  itemName              String
+  itemUrl               String?
+  itemImageUrl          String?
+  quantity              Int            @default(1)
+  // The international parcel number (Cainiao etc.), shown so the customer can follow it too.
+  carrier               String?
+  carrierTrackingNumber String?
+  estimatedArrival      Timestamptz?
+  status                ShipmentStatus @default(RECEIVED)
+  adminNotes            String         @default("")
+  createdAt             Timestamptz    @default(now())
+  updatedAt             Timestamptz    @default(now())
+
+  events ShipmentEvent[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@check(expression: "\"quantity\" BETWEEN 1 AND 99", name: "shipment_quantity_range")
+}
+
+// One line of a shipment's history: a status change, or a note ("held at customs").
+model ShipmentEvent {
+  id         String         @id @default(uuid())
+  shipmentId String
+  status     ShipmentStatus
+  note       String         @default("")
+  createdAt  Timestamptz    @default(now())
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId, createdAt])
 }

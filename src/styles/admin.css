@@ -1,0 +1,695 @@
+/* Admin dashboard and management screens. */
+
+.adminShell {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.adminSide {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  height: 100vh;
+  padding: 1.4rem 1rem;
+  border-right: var(--border);
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+.adminBrand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.adminBrand small {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--ink-3);
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.adminNav {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.adminNav a {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  border: 0;
+  border-radius: 3px;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.adminNav a:hover {
+  background: var(--card);
+  color: var(--accent);
+}
+
+.adminNav a.active {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none;
+}
+
+.adminFoot {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--line);
+}
+
+.adminUser {
+  padding: 0 0.9rem;
+  color: var(--ink-3);
+  font-size: 0.8rem;
+}
+
+.adminLink {
+  padding: 0.5rem 0.9rem;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.adminLink:hover {
+  background: var(--card);
+  color: var(--ink);
+}
+
+.adminMain {
+  min-width: 0;
+  padding: clamp(1.2rem, 3vw, 2.4rem);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.4rem;
+  align-content: start;
+}
+
+.adminHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.adminHead h1 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8rem;
+  font-size: clamp(2.6rem, 5vw, 4rem);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  line-height: 0.95;
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.kpi {
+  display: grid;
+  gap: 0.2rem;
+  padding: 1.1rem 1.2rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 0;
+}
+
+.kpi span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.kpi strong {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 3.4vw, 3rem);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.kpi small {
+  opacity: 0.75;
+}
+
+.kpi-orange {
+  background: var(--accent);
+}
+
+.kpi-yellow {
+  background: var(--spot-yellow);
+}
+
+.kpi-mint {
+  background: var(--spot-mint);
+}
+
+.kpi-pink {
+  background: var(--spot-pink);
+}
+
+.adminCols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 1.2rem;
+  align-items: start;
+}
+
+.panelHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.bars {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  align-items: end;
+  gap: 0.6rem;
+  height: 200px;
+  margin-bottom: 0.6rem;
+  padding-top: 1rem;
+}
+
+.barCol {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.3rem;
+  height: 100%;
+}
+
+.bar {
+  width: 100%;
+  border: var(--border);
+  border-radius: 10px 10px 3px 3px;
+  background: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+
+.barCol:last-child .bar {
+  background: var(--accent);
+}
+
+.barValue {
+  min-height: 1rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.barLabel {
+  color: var(--ink-3);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.statusList,
+.miniList {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.statusList a,
+.miniList a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.6rem 0.7rem;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  text-decoration: none;
+}
+
+.statusList a:hover,
+.miniList a:hover {
+  border-color: var(--ink);
+  background: var(--card);
+}
+
+.miniList a > .muted {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adminSearch {
+  display: flex;
+  gap: 0.6rem;
+  max-width: 480px;
+}
+
+.adminTable {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+  list-style: none;
+}
+
+.adminTable > li {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) 1.1fr 0.8fr 0.8fr 0.8fr 9.5rem;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.adminTable > li:last-child {
+  border-bottom: 0;
+}
+
+.adminTable > .adminTableHead {
+  padding-block: 0.6rem;
+  border-bottom: var(--border);
+  background: var(--paper-2);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.adminTable .isHidden {
+  opacity: 0.55;
+}
+
+.cellProduct {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.thumb {
+  position: relative;
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  overflow: hidden;
+  border: var(--border);
+  border-radius: 4px;
+}
+
+.thumb > * {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rowActions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.star {
+  width: 2.4rem;
+  height: 2.4rem;
+  border: var(--border);
+  border-radius: 4px;
+  background: var(--card);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.star.on {
+  border-color: transparent;
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.star:disabled,
+.switch:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.switch {
+  position: relative;
+  width: 3rem;
+  height: 1.7rem;
+  padding: 0;
+  border: var(--border);
+  border-radius: 999px;
+  background: var(--paper-2);
+  cursor: pointer;
+}
+
+.switch span {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 1.15rem;
+  height: 1.15rem;
+  border: var(--border);
+  border-radius: 50%;
+  background: var(--card);
+  transition: transform 0.15s;
+}
+
+.switch.on {
+  background: var(--green);
+}
+
+.switch.on span {
+  transform: translateX(1.3rem);
+}
+
+.formPanel {
+  max-width: 760px;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.segmented label {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.8rem 1rem;
+  border: var(--border);
+  border-radius: 4px;
+  background: var(--field);
+  cursor: pointer;
+}
+
+.segmented label span {
+  color: var(--ink-3);
+  font-size: 0.8rem;
+}
+
+.segmented label.active {
+  background: var(--accent-soft);
+  box-shadow: var(--shadow-sm);
+}
+
+.segmented input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.segmented label:focus-within {
+  outline: 2px solid var(--accent);
+}
+
+.checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem 1.6rem;
+}
+
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+.catManager {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 1.2rem;
+  align-items: start;
+}
+
+.catList {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  list-style: none;
+}
+
+.catRow {
+  display: grid;
+  gap: 0.6rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px dashed var(--ink);
+}
+
+.catEdit {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.catEdit .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.statusForm {
+  display: grid;
+  gap: 0.5rem;
+}
+
+@media (max-width: 1000px) {
+  .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .adminCols,
+  .catManager {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .adminShell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .adminSide {
+    position: static;
+    height: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.8rem 1rem;
+    padding: 0.8rem 1rem;
+    border-right: 0;
+    border-bottom: var(--border);
+  }
+
+  .adminBrand small,
+  .adminUser {
+    display: none;
+  }
+
+  .adminNav {
+    display: flex;
+    order: 3;
+    min-width: 0;
+    width: 100%;
+    gap: 0.3rem;
+    overflow-x: auto;
+  }
+
+  .adminNav a {
+    flex-shrink: 0;
+    padding: 0.5rem 0.8rem;
+  }
+
+  .adminFoot {
+    display: flex;
+    margin: 0 0 0 auto;
+    padding: 0;
+    border: 0;
+  }
+
+  .adminTable > .adminTableHead {
+    display: none;
+  }
+
+  .adminTable > li {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.7rem;
+  }
+
+  .adminTable > li > .cellProduct {
+    grid-column: 1 / -1;
+  }
+
+  .adminTable > li > [data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--ink-3);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .adminTable > li > .rowActions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .segmented {
+    grid-template-columns: 1fr;
+  }
+
+  .kpis {
+    gap: 0.7rem;
+  }
+}
+
+.attention {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+  padding: 0.9rem 1.2rem;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  text-decoration: none;
+}
+
+.attention span {
+  color: var(--ink-2);
+  font-size: 0.9rem;
+}
+
+.unreadPay {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.verifyPanel {
+  border: 1.5px solid var(--ink);
+  background: var(--spot-yellow);
+}
+
+@media (max-width: 700px) {
+  .miniList a {
+    flex-wrap: wrap;
+    row-gap: 0.3rem;
+  }
+
+  .miniList a > .muted {
+    flex: 1 1 100%;
+    order: 3;
+  }
+}
+
+.variantEditor {
+  display: grid;
+  gap: 0.9rem;
+  margin: 0;
+  padding: 1rem;
+  border: 1.5px dashed var(--ink);
+}
+
+.variantEditor legend {
+  padding: 0 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.variantRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr) minmax(0, 0.7fr) minmax(0, 1.6fr) auto;
+  gap: 0.7rem;
+  align-items: end;
+  padding: 0.8rem;
+  border: 1px solid var(--ink);
+  background: var(--card);
+}
+
+.variantRowActions {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding-bottom: 0.45rem;
+}
+
+.variantNote {
+  padding: 0.7rem 0.9rem;
+  border: 1px dashed var(--ink);
+}
+
+@media (max-width: 900px) {
+  .variantRow {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .variantImageField,
+  .variantRowActions {
+    grid-column: 1 / -1;
+  }
+}
+
+.catOrder {
+  flex: 0 0 4.5rem;
+  text-align: center;
+}
+
+.catFoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1.2rem;
+}
+
+.catRow:last-child {
+  border-bottom: 0;
+}

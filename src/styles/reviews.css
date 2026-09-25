@@ -1,0 +1,261 @@
+/* Product reviews: stars, summary, list, the rating form, and the admin list. */
+
+.stars {
+  color: var(--accent);
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.starsOff {
+  color: rgba(23, 19, 15, 0.22);
+}
+
+.ratingLine {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.ratingLine:hover span:last-child {
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+}
+
+.pcardRating {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.pcardRating .stars {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+
+.reviewSummary {
+  display: grid;
+  grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+  gap: clamp(1.2rem, 4vw, 3rem);
+  align-items: center;
+  margin-bottom: 2rem;
+  padding: 1.4rem;
+  border: 1.5px solid var(--ink);
+  background: var(--card);
+}
+
+.reviewScore {
+  display: grid;
+  gap: 0.2rem;
+  justify-items: start;
+}
+
+.reviewScore strong {
+  font-family: var(--font-display);
+  font-size: 4.6rem;
+  font-weight: 400;
+  line-height: 0.9;
+}
+
+.reviewScore .stars {
+  font-size: 1.3rem;
+}
+
+.ratingBars {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ratingBars li {
+  display: grid;
+  grid-template-columns: 2.6rem minmax(0, 1fr) 2rem;
+  align-items: center;
+  gap: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.ratingBar {
+  height: 0.7rem;
+  border: 1px solid var(--ink);
+  background: var(--field);
+}
+
+.ratingBar div {
+  height: 100%;
+  background: var(--accent);
+}
+
+.reviewNotice {
+  margin-bottom: 1.5rem;
+}
+
+.reviewForm {
+  display: grid;
+  gap: 1rem;
+  max-width: 44rem;
+  margin-bottom: 2rem;
+  padding: 1.3rem;
+  border: 1.5px solid var(--ink);
+  background: var(--card);
+}
+
+.reviewForm h3 {
+  font-size: 1.7rem;
+}
+
+.starPicker {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.starPicker label {
+  position: relative;
+  color: rgba(23, 19, 15, 0.25);
+  font-size: 2.3rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.12s ease, color 0.12s ease;
+}
+
+.starPicker label.on {
+  color: var(--accent);
+  text-shadow: 2px 2px 0 var(--ink);
+}
+
+.starPicker label:hover {
+  transform: translateY(-2px);
+}
+
+.starPicker input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.starPicker label:focus-within {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.starHint {
+  margin-left: 0.8rem;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.reviewList {
+  display: grid;
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.review {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1.1rem 1.2rem;
+  border: 1.5px solid var(--ink);
+  background: var(--card);
+}
+
+.reviewHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.9rem;
+}
+
+.reviewHead time {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.reviewText {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.reviewReply {
+  padding: 0.7rem 0.9rem;
+  border-left: 4px solid var(--accent);
+  background: var(--paper-2);
+  font-size: 0.92rem;
+}
+
+.reviewReply strong {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.reviewLink {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.adminReviews {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reviewModeration {
+  display: grid;
+  gap: 0.6rem;
+  padding-top: 0.7rem;
+  border-top: 1px dashed var(--ink);
+}
+
+.replyRow {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.replyRow .input {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .reviewSummary {
+    grid-template-columns: 1fr;
+  }
+
+  .reviewHead time {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
+}

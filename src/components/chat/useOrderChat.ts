@@ -1,0 +1,103 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { markPaymentSentAction, openChatAction, requestNewProofAction, sendChatMessageAction, wipeChatMessageAction } from "@/src/actions/messages";
+import type { ChatMessage, ChatPayment } from "@/src/services/messages";
+
+const POLL_MS = 5000;
+
+// Talks to the server for one order's chat. It refreshes every few seconds
+// while the tab is visible — no websockets to keep alive. Opening the chat also
+// marks the other side's messages as read (done server-side).
+export function useOrderChat(orderId: string, asAdmin: boolean) {
+  const router = useRouter();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [payment, setPayment] = useState<ChatPayment | null>(null);
+  const [closed, setClosed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const refresh = useCallback(async () => {
+    const result = await openChatAction(orderId, asAdmin);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    setMessages(result.messages);
+    setClosed(result.closed);
+    setPayment(result.payment);
+    setLoaded(true);
+  }, [orderId, asAdmin]);
+
+  useEffect(() => {
+    // The first fetch happens after mount; later ones come from the timer.
+    const first = setTimeout(refresh, 0);
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") refresh();
+    }, POLL_MS);
+    return () => {
+      clearTimeout(first);
+      clearInterval(timer);
+    };
+  }, [refresh]);
+
+  // Sends a message; returns it when the server accepted it, or null (with
+  // `error` set) when it didn't.
+  const send = async (text: string, photo: File | null, sensitive: boolean) => {
+    setBusy(true);
+    setError("");
+
+    const form = new FormData();
+    form.set("text", text);
+    if (photo) form.set("image", photo);
+    if (sensitive) form.set("sensitive", "true");
+
+    const result = await sendChatMessageAction(orderId, asAdmin, form);
+    setBusy(false);
+
+    if (!result.ok) {
+      setError(result.error);
+      return null;
+    }
+    return result.message;
+  };
+
+  const wipe = async (messageId: string) => {
+    const result = await wipeChatMessageAction(orderId, asAdmin, messageId);
+    if (!result.ok) setError(result.error);
+    await refresh();
+  };
+
+  const appendMessage = (message: ChatMessage) =>
+    setMessages((current) => (current.some((m) => m.id === message.id) ? current : [...current, message]));
+
+  // Runs a payment action, then reloads the chat and the surrounding page (the
+  // order page shows the payment state too).
+  const runPaymentAction = async (action: (orderId: string) => Promise<{ ok: boolean } & { error?: string }>) => {
+    setBusy(true);
+    setError("");
+    const result = await action(orderId);
+    if (!result.ok) setError(result.error ?? "");
+    await refresh();
+    router.refresh();
+    setBusy(false);
+  };
+
+  return {
+    messages,
+    payment,
+    closed,
+    loaded,
+    error,
+    busy,
+    setError,
+    refresh,
+    send,
+    wipe,
+    appendMessage,
+    markSent: () => runPaymentAction(markPaymentSentAction),
+    askNewProof: () => runPaymentAction(requestNewProofAction),
+  };
+}

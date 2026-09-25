@@ -1,19 +1,9 @@
-import { db } from "./db.ts";
-import { seed } from "./seed.ts";
+// Database access for user accounts (the better-auth table): read-only queries the shop needs.
 
-export { db };
+import { db } from "./db";
 
-export async function listUsers(limit = 10) {
-  await seed();
-  const users = await db.orm.public.User.select("id", "email", "username", "name", "createdAt").limit(limit).all();
-
-  return users.map((user) => ({
-    id: String(user.id),
-    email: user.email,
-    username: user.username ?? null,
-    name: user.name ?? null,
-    createdAt: user.createdAt,
-  }));
-}
-
-export type StarterUser = Awaited<ReturnType<typeof listUsers>>[number];
+export const UserRepository = {
+  findAdmins: async () => {
+    return await db.orm.public.User.where({ role: "ADMIN" }).all();
+  },
+};

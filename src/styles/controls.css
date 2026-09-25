@@ -1,0 +1,303 @@
+/* Buttons, links, forms, tags (pills, badges) and notices. */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.25rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  clip-path: none;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--ink);
+  color: var(--paper);
+  transform: none;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btnPrimary {
+  background: var(--ink);
+  color: var(--paper);
+  clip-path: none;
+  border-radius: 0;
+}
+
+.btnGhost {
+  background: transparent;
+}
+
+.btnAccent {
+  border-color: var(--ink);
+  background: var(--accent);
+  color: var(--ink);
+  clip-path: none;
+  border-radius: 0;
+}
+
+.btnLg {
+  padding: 1.05rem 1.7rem;
+  font-size: 0.82rem;
+}
+
+.btnSm {
+  padding: 0.5rem 0.8rem;
+  font-size: 0.68rem;
+}
+
+.btnBlock {
+  width: 100%;
+}
+
+.linkBtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.linkBtn:disabled {
+  color: var(--ink-3);
+  cursor: default;
+  text-decoration: none;
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field label,
+.label {
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.input {
+  width: 100%;
+  padding: 0.8rem 0.9rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 0;
+  background: var(--field);
+  color: var(--ink);
+  font: inherit;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.input::placeholder {
+  color: var(--ink-3);
+}
+
+.input:focus {
+  outline: none;
+  background: #fff;
+  box-shadow: 4px 4px 0 var(--accent);
+}
+
+textarea.input {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.hint {
+  color: var(--ink-3);
+  font-size: 0.8rem;
+}
+
+.error,
+.notice {
+  padding: 0.7rem 0.9rem;
+  border: var(--border);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.error {
+  background: var(--red-soft);
+}
+
+.notice {
+  background: var(--card);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.check input {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--accent);
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 560px) {
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.pillCobalt {
+  border-color: var(--cobalt);
+  background: var(--cobalt-soft);
+  color: var(--cobalt);
+}
+
+.pillRed {
+  border-color: var(--red);
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.pillAmber {
+  border-color: #8a5a00;
+  background: var(--amber-soft);
+  color: #6b4700;
+}
+
+.pillGreen {
+  border-color: var(--green);
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.pillInk {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.badgeADMIN {
+  border-color: var(--red);
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.badgeSTAFF {
+  background: var(--accent-soft);
+}
+
+.badgeMEMBER {
+  background: var(--green-soft);
+}
+
+.copyBtn {
+  padding: 0.2rem 0.6rem;
+  border: var(--border);
+  border-color: var(--line-2);
+  border-radius: 7px;
+  background: var(--card);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.copyBtn:hover {
+  color: var(--ink);
+  border-color: var(--ink-3);
+}
+
+.unread {
+  display: inline-block;
+  margin-left: 0.6rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--ink);
+}
+
+.btnAccent:hover:not(:disabled),
+.btnAccent:hover:not(:disabled) {
+  background: var(--ink);
+  color: var(--paper);
+}

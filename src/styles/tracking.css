@@ -1,0 +1,253 @@
+/* AliExpress order tracking: the public page, the code lookup, and the admin's shipment screens. */
+
+.trackSteps {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  margin: 0 0 2rem;
+  padding: 0;
+  border: 1.5px solid var(--ink);
+  background: var(--card);
+  list-style: none;
+}
+
+.trackSteps li {
+  display: grid;
+  gap: 0.35rem;
+  align-content: start;
+  padding: 0.8rem 0.6rem;
+  border-right: 1px solid var(--ink);
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.trackSteps li:last-child {
+  border-right: 0;
+}
+
+.trackSteps li.done {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.trackSteps li.current {
+  background: var(--accent);
+  color: var(--ink);
+}
+
+.trackStepNo {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.trackCancelled {
+  margin-bottom: 2rem;
+}
+
+.trackLayout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.trackItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.trackThumb {
+  flex-shrink: 0;
+  width: 5.5rem;
+  height: 6.8rem;
+  overflow: hidden;
+  border: 1.5px solid var(--ink);
+}
+
+.trackThumb > * {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.trackItemName {
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+.facts {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0 0 0.8rem;
+}
+
+.facts div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.2rem 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px dashed var(--ink);
+}
+
+.facts dt {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.facts code {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+/* The hidden characters of a masked value, smudged out. */
+.blurText {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.blurMask {
+  display: inline-block;
+  filter: blur(4px);
+  user-select: none;
+  pointer-events: none;
+}
+
+.trackTimeline {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trackTimeline li {
+  position: relative;
+  display: grid;
+  gap: 0.15rem;
+  padding: 0 0 1.2rem 1.6rem;
+  border-left: 2px solid var(--ink);
+}
+
+.trackTimeline li::before {
+  content: "";
+  position: absolute;
+  top: 0.2rem;
+  left: -7px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--ink);
+  background: var(--card);
+}
+
+.trackTimeline li:first-child::before {
+  background: var(--accent);
+}
+
+.trackTimeline li:last-child {
+  padding-bottom: 0;
+  border-left-color: transparent;
+}
+
+.trackTimeline strong {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.trackTimeline time {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.trackTimeline p {
+  margin-top: 0.2rem;
+}
+
+.trackHelp {
+  margin-top: 2.5rem;
+}
+
+.trackLookup {
+  display: grid;
+  gap: 1rem;
+  max-width: 30rem;
+}
+
+.formSection {
+  margin-top: 0.4rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1.5px solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1.4;
+}
+
+/* admin */
+.shipmentTracking {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.shareLink {
+  display: block;
+  padding: 0.7rem 0.9rem;
+  border: 1.5px dashed var(--ink);
+  background: var(--field);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.shareBox {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.removeEvent {
+  justify-self: start;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 860px) {
+  .trackSteps {
+    grid-template-columns: 1fr;
+  }
+
+  .trackSteps li {
+    grid-auto-flow: column;
+    justify-content: start;
+    align-items: center;
+    gap: 0.8rem;
+    border-right: 0;
+    border-bottom: 1px solid var(--ink);
+  }
+
+  .trackSteps li:last-child {
+    border-bottom: 0;
+  }
+
+  .trackLayout {
+    grid-template-columns: 1fr;
+  }
+}

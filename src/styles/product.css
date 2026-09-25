@@ -1,0 +1,214 @@
+/* Product page: gallery, variant picker, quantity stepper. */
+
+.pdp {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: clamp(1.5rem, 5vw, 4rem);
+  align-items: start;
+}
+
+.gallery {
+  position: sticky;
+  top: 6.5rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.galleryMain {
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border: var(--border);
+  border-radius: 4px;
+  background: var(--paper-2);
+  box-shadow: none;
+}
+
+.galleryThumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.galleryThumbs button {
+  width: 4.2rem;
+  aspect-ratio: 1;
+  padding: 0;
+  overflow: hidden;
+  border: var(--border);
+  border-radius: 4px;
+  background: var(--card);
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.galleryThumbs button.active {
+  opacity: 1;
+  outline: 2px solid var(--accent);
+}
+
+.pdpInfo {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.pdpInfo h1 {
+  font-size: clamp(2.6rem, 5.4vw, 4.2rem);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  line-height: 0.95;
+}
+
+.pdpTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.deliveryNote {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 2px;
+  background: var(--card);
+  font-size: 0.92rem;
+}
+
+.buyBox {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.8rem;
+}
+
+.pdpDescription h2 {
+  margin-bottom: 0.6rem;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.pdpDescription p {
+  max-width: 60ch;
+  color: var(--ink-2);
+  white-space: pre-line;
+}
+
+@media (max-width: 860px) {
+  .pdp {
+    grid-template-columns: 1fr;
+    padding-bottom: 6rem;
+  }
+
+  .gallery {
+    position: static;
+  }
+
+  .pdpBuy {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 35;
+    padding: 0.7rem clamp(16px, 4vw, 40px);
+    border-top: var(--border);
+    background: var(--paper);
+  }
+}
+
+.cartVariant {
+  color: var(--cobalt);
+}
+
+.variantPicker {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.variantLabel {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.variants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.variant {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 8.5rem;
+  padding: 0.6rem 0.9rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 0;
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.variant:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.variant.active {
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: 4px 4px 0 var(--accent);
+}
+
+.variant:disabled {
+  border-style: dashed;
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+.variantThumb {
+  display: block;
+  flex-shrink: 0;
+  width: 2.6rem;
+  height: 2.6rem;
+  overflow: hidden;
+  border: 1px solid currentColor;
+}
+
+.variantText {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.variantName {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.variantPrice {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.galleryImg {
+  animation: swap 0.35s ease-out;
+}
+
+@keyframes swap {
+  from {
+      opacity: 0;
+      transform: scale(1.04);
+    }
+}

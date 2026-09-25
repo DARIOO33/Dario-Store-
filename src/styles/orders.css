@@ -1,0 +1,299 @@
+/* Order page and lists: timeline, panels, payment instructions. */
+
+.thanks {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  margin-bottom: 2rem;
+  padding: 1.2rem 1.4rem;
+  border: 1px solid var(--green);
+  border-left: 6px solid var(--green);
+  border-radius: 2px;
+  background: var(--green-soft);
+}
+
+.thanks h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.thanksMark {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 3.4rem;
+  height: 3.4rem;
+  border: var(--border);
+  border-radius: 4px;
+  background: var(--green);
+  color: var(--on-accent);
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.orderHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.timeline {
+  display: flex;
+  gap: 0;
+  margin: 0 0 2rem;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline li {
+  position: relative;
+  flex: 1;
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+
+.timeline li::before {
+  content: "";
+  position: absolute;
+  top: 1.3rem;
+  right: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--line-2);
+}
+
+.timeline li:first-child::before {
+  display: none;
+}
+
+.timeline li.done::before,
+.timeline li.current::before {
+  background: var(--ink);
+  opacity: 1;
+}
+
+.timelineDot {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border: var(--border);
+  border-radius: 4px;
+  background: var(--paper);
+  font-weight: 700;
+}
+
+.timeline li.done {
+  color: var(--ink);
+}
+
+.timeline li.done .timelineDot {
+  background: var(--green);
+  color: var(--on-accent);
+}
+
+.timeline li.current {
+  color: var(--ink);
+}
+
+.timeline li.current .timelineDot {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.orderLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: clamp(1.2rem, 3vw, 2rem);
+  align-items: start;
+}
+
+.orderSide {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.panel {
+  padding: 1.3rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 0;
+  background: var(--card);
+  min-width: 0;
+}
+
+.panel h2 {
+  margin-bottom: 0.9rem;
+  font-size: 1.7rem;
+}
+
+.orderItems {
+  display: grid;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.orderItems li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.orderItems li:last-child {
+  border-bottom: 0;
+}
+
+.orderList {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.orderCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1rem 1.2rem;
+  border: var(--border);
+  border-radius: 4px;
+  background: var(--card);
+  text-decoration: none;
+  transition: border-color 0.15s ease;
+}
+
+.orderCard:hover {
+  border-color: var(--accent);
+}
+
+.orderNo {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+@media (max-width: 820px) {
+  .orderLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Order pages: the chat sits under the items, beside the side panels, instead of below everything.
+   On narrow screens: items, then the side panels, then the chat. */
+.orderWithChat {
+  grid-template-areas: "items side" "chat side";
+  grid-template-rows: auto 1fr;
+}
+
+.orderWithChat > :first-child {
+  grid-area: items;
+}
+
+.orderWithChat > .orderSide {
+  grid-area: side;
+}
+
+.orderWithChat > .orderChat {
+  grid-area: chat;
+  align-self: start;
+  min-width: 0;
+}
+
+.orderWithChat .chatWrap {
+  max-width: none;
+  margin-top: 0;
+}
+
+@media (max-width: 820px) {
+  .orderWithChat {
+    grid-template-areas: "items" "side" "chat";
+    grid-template-rows: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .orderCard {
+    grid-template-columns: 1fr auto;
+  }
+
+  .orderCard > :last-child {
+    grid-column: 1 / -1;
+  }
+
+  .timeline li {
+    font-size: 0.72rem;
+  }
+}
+
+.payBox .payLines {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.9rem 0;
+}
+
+.payLines div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.3rem 1rem;
+  padding: 0.55rem 0.7rem;
+  border: var(--border);
+  border-radius: 4px;
+  background: var(--field);
+}
+
+.payLines dt {
+  color: var(--ink-3);
+  font-size: 0.78rem;
+}
+
+.payLines dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.payLines code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.85rem;
+}
+
+.okNote {
+  color: var(--green);
+  font-weight: 600;
+}
+
+.warnNote {
+  padding: 0.6rem 0.8rem;
+  border-radius: 4px;
+  background: var(--amber-soft);
+  color: var(--amber);
+  font-size: 0.82rem;
+}
+
+.sentNote {
+  padding: 0.6rem 0.8rem;
+  border-radius: 4px;
+  background: var(--green-soft);
+  color: var(--green);
+  font-size: 0.9rem;
+}

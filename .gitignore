@@ -3,3 +3,8 @@ dist/
 .env
 /.alchemy
 /.prisma-composer
+
+# Next.js / TypeScript build output
+.next/
+next-env.d.ts
+*.tsbuildinfo
