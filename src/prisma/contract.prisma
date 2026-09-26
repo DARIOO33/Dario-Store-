@@ -257,6 +257,9 @@ model Order {
   paidAt             Timestamptz?
   shippedAt          Timestamptz?
   deliveredAt        Timestamptz?
+  // Set when the team closes the order's chat (the "Close chat" button); null while it is open.
+  // Only a cancelled order's chat closes by itself.
+  chatClosedAt       Timestamptz?
   createdAt          Timestamptz @default(now())
   updatedAt          Timestamptz @default(now())
 

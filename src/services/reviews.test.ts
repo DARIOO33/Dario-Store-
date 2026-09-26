@@ -115,3 +115,39 @@ describe("review links on an order", () => {
     await expect(ReviewService.reviewLinksForOrder(buyer, { ...order, status: "PENDING" })).resolves.toEqual({});
   });
 });
+
+describe("the review card in a delivered order's chat", () => {
+  const delivered = {
+    userId: "user-1",
+    status: "DELIVERED" as const,
+    items: [
+      { productId: "iem", productName: "KZ Castor" },
+      { productId: "iem", productName: "KZ Castor" }, // two variants of the same product
+      { productId: "netflix", productName: "Netflix 1 month" },
+      { productId: null, productName: "Deleted product" },
+    ],
+  };
+
+  it("lists each product once, with the customer's review when there is one", async () => {
+    reviews.findByUserAndProduct.mockImplementation(async (_user, productId) => (productId === "iem" ? ({ id: "rev-1", rating: 4, message: "Good", hideName: true } as never) : null));
+
+    await expect(ReviewService.forOrderChat(buyer, delivered)).resolves.toEqual({
+      reviewerName: "Sami Ben Ali",
+      items: [
+        { productId: "iem", name: "KZ Castor", existing: { rating: 4, message: "Good", hideName: true } },
+        { productId: "netflix", name: "Netflix 1 month", existing: null },
+      ],
+    });
+  });
+
+  it("is only for the owner, and only once the order is delivered", async () => {
+    await expect(ReviewService.forOrderChat(other, delivered)).resolves.toBeNull();
+    for (const status of ["PENDING", "PAID", "SHIPPED", "CANCELLED"] as const) {
+      await expect(ReviewService.forOrderChat(buyer, { ...delivered, status })).resolves.toBeNull();
+    }
+  });
+
+  it("is empty when every product was deleted from the shop", async () => {
+    await expect(ReviewService.forOrderChat(buyer, { ...delivered, items: [{ productId: null, productName: "Gone" }] })).resolves.toBeNull();
+  });
+});

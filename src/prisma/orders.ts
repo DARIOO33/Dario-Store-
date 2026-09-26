@@ -78,6 +78,11 @@ export const OrderRepository = {
       .all();
   },
 
+  // `null` reopens the chat.
+  setChatClosed: async (id: string, closedAt: Temporal.Instant | null) => {
+    return await db.orm.public.Order.where({ id }).update({ chatClosedAt: closedAt, updatedAt: now() });
+  },
+
   setDeliveryEmailSent: async (id: string) => {
     return await db.orm.public.Order.where({ id }).update({ deliveryEmailSentAt: now(), updatedAt: now() });
   },

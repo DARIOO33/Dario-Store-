@@ -37,6 +37,13 @@ export type ReviewSummary = {
   distribution: { stars: number; count: number }[];
 };
 
+// One product in the chat's review card (plain values, sent to the browser).
+export type ChatReviewItem = {
+  productId: string;
+  name: string;
+  existing: { rating: number; message: string; hideName: boolean } | null;
+};
+
 // What the current visitor may do on a product's review section.
 export type ReviewAccess =
   | { kind: "guest" }
@@ -124,6 +131,25 @@ export const ReviewService = {
       links[item.productId] = (await ReviewRepository.findByUserAndProduct(viewer.id, item.productId)) ? "edit" : "new";
     }
     return links;
+  },
+
+  // The review card in the chat of a delivered order (customer side): one entry per product that is
+  // still in the shop, with the customer's review when they already left one. Null for anyone else.
+  forOrderChat: async (viewer: { id: string; name: string }, order: { userId: string | null; status: OrderStatus; items: { productId: string | null; productName: string }[] }) => {
+    if (order.userId !== viewer.id || order.status !== "DELIVERED") return null;
+
+    const items: ChatReviewItem[] = [];
+    for (const item of order.items) {
+      if (!item.productId || items.some((known) => known.productId === item.productId)) continue;
+
+      const existing = await ReviewRepository.findByUserAndProduct(viewer.id, item.productId);
+      items.push({
+        productId: item.productId,
+        name: item.productName,
+        existing: existing ? { rating: existing.rating, message: existing.message, hideName: existing.hideName } : null,
+      });
+    }
+    return items.length > 0 ? { reviewerName: viewer.name, items } : null;
   },
 
   // Creates the customer's review, or updates it if they already left one.

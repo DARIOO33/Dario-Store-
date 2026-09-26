@@ -16,8 +16,9 @@ vi.mock("../prisma/messages", () => ({
   },
 }));
 vi.mock("../prisma/orders", () => ({
-  OrderRepository: { findById: vi.fn(), listForUser: vi.fn() },
+  OrderRepository: { findById: vi.fn(), listForUser: vi.fn(), setChatClosed: vi.fn() },
 }));
+vi.mock("./reviews", () => ({ ReviewService: { forOrderChat: vi.fn() } }));
 vi.mock("./chat-images", () => ({
   ChatImages: { save: vi.fn(), load: vi.fn(), remove: vi.fn() },
 }));
@@ -25,11 +26,13 @@ vi.mock("./chat-images", () => ({
 import { MessageRepository } from "../prisma/messages";
 import { OrderRepository } from "../prisma/orders";
 import { ChatImages } from "./chat-images";
+import { ReviewService } from "./reviews";
 import { MessageService } from "./messages";
 
 const messages = vi.mocked(MessageRepository);
 const orders = vi.mocked(OrderRepository);
 const images = vi.mocked(ChatImages);
+const reviewService = vi.mocked(ReviewService);
 
 const customer = { id: "user-1", role: "CUSTOMER", name: "Sami" };
 const stranger = { id: "user-2", role: "CUSTOMER", name: "Other" };
@@ -52,6 +55,8 @@ function order(changes: Record<string, unknown> = {}) {
     paidAt: null,
     shippedAt: null,
     deliveredAt: null,
+    chatClosedAt: null,
+    locale: "en",
     ...changes,
   } as unknown as FakeOrder;
 }
@@ -275,5 +280,90 @@ describe("unread badges", () => {
 
     await expect(MessageService.unreadForCustomer(customer.id)).resolves.toEqual({ "order-1": 2, "order-2": 1 });
     expect(messages.findUnread).toHaveBeenCalledWith(true, ["order-1", "order-2"]);
+  });
+});
+
+describe("closing the chat (the team's button)", () => {
+  it("a delivered order's chat stays open until the team closes it", async () => {
+    orders.findById.mockResolvedValue(order({ status: "DELIVERED", deliveredAt: at }));
+    const result = await MessageService.open("order-1", customer, false);
+
+    expect(result.closure).toBeNull();
+    await expect(MessageService.send("order-1", customer, false, "Works great, thanks!")).resolves.toBeDefined();
+  });
+
+  it("lets admin and staff close it, and tells the customer in their language", async () => {
+    orders.findById.mockResolvedValue(order({ status: "DELIVERED", locale: "fr" }));
+
+    await MessageService.setClosed("order-1", staff, true);
+
+    expect(orders.setChatClosed).toHaveBeenCalledWith("order-1", expect.any(Temporal.Instant));
+    expect(messages.create).toHaveBeenCalledWith(expect.objectContaining({ fromAdmin: true, body: "La boutique a fermé cette conversation. Merci pour votre commande !" }));
+
+    await MessageService.setClosed("order-1", admin, true);
+    expect(orders.setChatClosed).toHaveBeenCalledTimes(2);
+  });
+
+  it("refuses customers, guests and strangers", async () => {
+    for (const viewer of [customer, stranger, null]) {
+      await expect(MessageService.setClosed("order-1", viewer, true)).rejects.toMatchObject({ key: "errors.writeDenied" });
+    }
+    expect(orders.setChatClosed).not.toHaveBeenCalled();
+  });
+
+  it("does nothing when it is already in that state, and never reopens a cancelled order", async () => {
+    orders.findById.mockResolvedValue(order({ chatClosedAt: at }));
+    await MessageService.setClosed("order-1", admin, true);
+    expect(orders.setChatClosed).not.toHaveBeenCalled();
+
+    orders.findById.mockResolvedValue(order({ status: "CANCELLED" }));
+    await expect(MessageService.setClosed("order-1", admin, false)).rejects.toThrow(/cancelled/);
+  });
+
+  it("reopens it with a message", async () => {
+    orders.findById.mockResolvedValue(order({ chatClosedAt: at }));
+    await MessageService.setClosed("order-1", admin, false);
+
+    expect(orders.setChatClosed).toHaveBeenCalledWith("order-1", null);
+    expect(messages.create).toHaveBeenCalledWith(expect.objectContaining({ body: "The store reopened this conversation." }));
+  });
+
+  it("once closed, nobody can write (the team reopens first)", async () => {
+    orders.findById.mockResolvedValue(order({ chatClosedAt: at }));
+
+    const opened = await MessageService.open("order-1", customer, false);
+    expect(opened).toMatchObject({ closed: true, closure: "store" });
+
+    await expect(MessageService.send("order-1", customer, false, "hi")).rejects.toMatchObject({ key: "errors.chatClosedByStore" });
+    await expect(MessageService.send("order-1", admin, true, "hi")).rejects.toMatchObject({ key: "errors.chatClosedByStore" });
+    expect(messages.create).not.toHaveBeenCalled();
+  });
+
+  it("still reports a cancelled order's chat as closed by the cancellation", async () => {
+    orders.findById.mockResolvedValue(order({ status: "CANCELLED", chatClosedAt: at }));
+    await expect(MessageService.open("order-1", customer, false)).resolves.toMatchObject({ closure: "cancelled" });
+    await expect(MessageService.send("order-1", customer, false, "hi")).rejects.toMatchObject({ key: "errors.chatClosed" });
+  });
+});
+
+describe("the review card in the chat", () => {
+  const card = { reviewerName: "Sami", items: [{ productId: "iem", name: "KZ Castor", existing: null }] };
+
+  it("is given to the customer, never to the team", async () => {
+    orders.findById.mockResolvedValue(order({ status: "DELIVERED" }));
+    reviewService.forOrderChat.mockResolvedValue(card);
+
+    await expect(MessageService.open("order-1", customer, false)).resolves.toMatchObject({ review: card });
+    expect(reviewService.forOrderChat).toHaveBeenCalledWith({ id: customer.id, name: customer.name }, expect.objectContaining({ id: "order-1" }));
+
+    reviewService.forOrderChat.mockClear();
+    await expect(MessageService.open("order-1", admin, true)).resolves.toMatchObject({ review: null });
+    expect(reviewService.forOrderChat).not.toHaveBeenCalled();
+  });
+
+  it("stays available after the chat is closed", async () => {
+    orders.findById.mockResolvedValue(order({ status: "DELIVERED", chatClosedAt: at }));
+    reviewService.forOrderChat.mockResolvedValue(card);
+    await expect(MessageService.open("order-1", customer, false)).resolves.toMatchObject({ closure: "store", review: card });
   });
 });

@@ -21,7 +21,8 @@ npm run lint           # eslint, must be clean (warnings count as failures)
 npm test               # Vitest unit tests (npm run test:watch while working)
 npm run build          # production build; always read its real exit code, don't pipe it
 npm run contract:emit  # after ANY edit to src/prisma/contract.prisma
-npm run db:update      # after contract:emit; destructive steps need `-- --confirm membership`
+npm run db:update      # after contract:emit; destructive steps need `-- --confirm membership`. Uses DATABASE_URL from
+                       # .env (prisma.config.ts loads it): check the target with `-- --dry-run` first
 npm run seed:store     # demo catalogue
 ```
 
@@ -61,6 +62,9 @@ npm run seed:store     # demo catalogue
   `services/chat-images.ts` (upload/load/delete + DB fallback) — never read `MessageImage.dataBase64` directly.
 - Stock changes use a compare-and-swap inside a transaction (see `services/orders.ts`); keep that pattern.
 - Chat/photo access checks live in `services/messages.ts` — every read/write goes through `accessFor`.
+- Chat closing: only a cancelled order's chat closes by itself. Otherwise it stays open (also after delivery) until
+  the team presses "Close chat" (`Order.chatClosedAt`, `MessageService.setClosed`). The customer's review card in a
+  delivered order's chat comes from `ReviewService.forOrderChat` and saves through the normal review action.
 - Chat text and photos are encrypted at rest inside `prisma/messages.ts` (`lib/crypto.ts`, key `CHAT_ENCRYPTION_KEY`).
   Always read/write chat rows through `MessageRepository`, never `db.orm.public.OrderMessage` directly, or you'll store
   plaintext / show ciphertext. Never log message bodies. Changing the key makes old messages unreadable.

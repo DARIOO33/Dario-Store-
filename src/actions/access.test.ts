@@ -72,6 +72,7 @@ const TEAM_ACTIONS: [string, () => Promise<unknown>][] = [
   ["previewDeliveryEmailAction", () => orders.previewDeliveryEmailAction("o-1", "key")],
   ["setOrderStatusAction", () => orders.setOrderStatusAction("o-1", "PAID")],
   ["requestNewProofAction", () => messages.requestNewProofAction("o-1")],
+  ["setChatClosedAction", () => messages.setChatClosedAction("o-1", true)],
 ];
 
 beforeEach(() => {
@@ -81,7 +82,7 @@ beforeEach(() => {
 
 describe("admin-only server actions", () => {
   it("covers every team action exported from src/actions", () => {
-    expect(ADMIN_ACTIONS.length + TEAM_ACTIONS.length).toBe(24);
+    expect(ADMIN_ACTIONS.length + TEAM_ACTIONS.length).toBe(25);
   });
 
   it.each(ADMIN_ACTIONS)("%s refuses guests, customers and staff without touching any service", async (_name, call) => {

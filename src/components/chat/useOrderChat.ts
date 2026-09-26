@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { markPaymentSentAction, openChatAction, requestNewProofAction, sendChatMessageAction, wipeChatMessageAction } from "@/src/actions/messages";
-import type { ChatMessage, ChatPayment } from "@/src/services/messages";
+import { markPaymentSentAction, openChatAction, requestNewProofAction, sendChatMessageAction, setChatClosedAction, wipeChatMessageAction } from "@/src/actions/messages";
+import type { ChatClosure, ChatMessage, ChatPayment, ChatReview } from "@/src/services/messages";
 
 const POLL_MS = 5000;
 
@@ -14,7 +14,8 @@ export function useOrderChat(orderId: string, asAdmin: boolean) {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [payment, setPayment] = useState<ChatPayment | null>(null);
-  const [closed, setClosed] = useState(false);
+  const [closure, setClosure] = useState<ChatClosure>(null);
+  const [review, setReview] = useState<ChatReview | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -26,7 +27,8 @@ export function useOrderChat(orderId: string, asAdmin: boolean) {
       return;
     }
     setMessages(result.messages);
-    setClosed(result.closed);
+    setClosure(result.closure);
+    setReview(result.review);
     setPayment(result.payment);
     setLoaded(true);
   }, [orderId, asAdmin]);
@@ -88,7 +90,9 @@ export function useOrderChat(orderId: string, asAdmin: boolean) {
   return {
     messages,
     payment,
-    closed,
+    closed: closure !== null,
+    closure,
+    review,
     loaded,
     error,
     busy,
@@ -99,5 +103,7 @@ export function useOrderChat(orderId: string, asAdmin: boolean) {
     appendMessage,
     markSent: () => runPaymentAction(markPaymentSentAction),
     askNewProof: () => runPaymentAction(requestNewProofAction),
+    // The team's "Close chat" / "Reopen chat".
+    setClosed: (closed: boolean) => runPaymentAction((id) => setChatClosedAction(id, closed)),
   };
 }

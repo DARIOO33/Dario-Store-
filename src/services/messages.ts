@@ -3,18 +3,28 @@
 
 import { MessageRepository } from "../prisma/messages";
 import { OrderRepository } from "../prisma/orders";
-import { userError } from "../lib/result";
+import { UserError, userError } from "../lib/result";
 import { now } from "../lib/time";
 import { SENSITIVE_MESSAGE_DAYS } from "../lib/store";
 import { sniffImageType } from "../lib/image-type";
 import { ChatImages } from "./chat-images";
 import { isTeam } from "../lib/roles";
+import { ReviewService, type ChatReviewItem } from "./reviews";
+import { createTranslator } from "../i18n/translate";
+import { toLocale } from "../i18n/config";
 
 const MAX_LENGTH = 1000;
 const MAX_PER_MINUTE = 8;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 type Viewer = { id: string; role: string; name?: string } | null;
+
+// Why nobody can write any more: the order was cancelled, or the team closed the chat
+// (the "Close chat" button). A delivered order's chat stays open until the team closes it.
+export type ChatClosure = "cancelled" | "store" | null;
+
+// Shown in a delivered order's chat so the customer can review what they bought.
+export type ChatReview = { reviewerName: string; items: ChatReviewItem[] };
 
 // What the browser gets: plain values only (no Temporal objects).
 export type ChatMessage = {
@@ -83,6 +93,11 @@ function currentStage(order: { status: string; updatedAt: Temporal.Instant; paid
 // Chats refresh every few seconds, so this runs at most once every 10 minutes per server.
 let lastErase = 0;
 
+function closureOf(order: { status: string; chatClosedAt: Temporal.Instant | null }): ChatClosure {
+  if (order.status === "CANCELLED") return "cancelled";
+  return order.chatClosedAt ? "store" : null;
+}
+
 // Deletes the photo (wherever it's kept), then blanks the message.
 async function wipeMessage(messageId: string) {
   const image = await MessageRepository.findImage(messageId);
@@ -121,13 +136,18 @@ export const MessageService = {
       stage: currentStage(order),
     };
 
-    return { messages: messages.map((message) => toChat(message, access.asAdmin)), closed: order.status === "CANCELLED", payment };
+    const closure = closureOf(order);
+    const review: ChatReview | null = access.asAdmin ? null : await ReviewService.forOrderChat({ id: viewer!.id, name: viewer!.name ?? "" }, order);
+
+    return { messages: messages.map((message) => toChat(message, access.asAdmin)), closed: closure !== null, closure, payment, review };
   },
 
   send: async (orderId: string, viewer: Viewer, asAdmin: boolean, text: string, image?: { bytes: Uint8Array }, sensitive = false) => {
     const access = await accessFor(orderId, viewer, asAdmin);
     if (!access) throw userError("errors.writeDenied");
-    if (access.order.status === "CANCELLED") throw userError("errors.chatClosed");
+    const closure = closureOf(access.order);
+    if (closure === "cancelled") throw userError("errors.chatClosed");
+    if (closure === "store") throw userError("errors.chatClosedByStore");
 
     const body = text.replace(/\r\n/g, "\n").trim();
     if (body.length === 0 && !image) throw userError("errors.emptyMessage");
@@ -150,6 +170,20 @@ export const MessageService = {
     if (image && mimeType) await ChatImages.save(message.id, { bytes: image.bytes, mimeType });
 
     return { message: toChat({ ...message, sender: access.asAdmin ? { name: viewer!.name ?? "" } : null }, access.asAdmin) };
+  },
+
+  // The team's "Close chat" / "Reopen chat" button. The customer is told in the chat, in their language.
+  setClosed: async (orderId: string, viewer: Viewer, closed: boolean) => {
+    const access = await accessFor(orderId, viewer, true);
+    if (!access) throw userError("errors.writeDenied");
+
+    const { order } = access;
+    if (order.status === "CANCELLED") throw new UserError("A cancelled order's chat stays closed.");
+    if (!!order.chatClosedAt === closed) return;
+
+    await OrderRepository.setChatClosed(orderId, closed ? now() : null);
+    const t = createTranslator(toLocale(order.locale));
+    await MessageRepository.create({ orderId, fromAdmin: true, body: t(closed ? "chatSystem.chatClosed" : "chatSystem.chatReopened"), hasImage: false });
   },
 
   // Either side of the chat can erase a "login details" message right away (for example once the top-up is done).

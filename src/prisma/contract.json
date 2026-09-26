@@ -596,6 +596,13 @@
           },
           "Order": {
             "fields": {
+              "chatClosedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
               "createdAt": {
                 "nullable": false,
                 "type": {
@@ -883,6 +890,9 @@
             },
             "storage": {
               "fields": {
+                "chatClosedAt": {
+                  "column": "chatClosedAt"
+                },
                 "createdAt": {
                   "column": "createdAt"
                 },
@@ -2992,6 +3002,11 @@
                 }
               ],
               "columns": {
+                "chatClosedAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
                 "createdAt": {
                   "codecId": "pg/timestamptz-temporal@1",
                   "default": {
@@ -4817,7 +4832,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "9c996eaf75a73c826c4eaa39711a05e60de120fa93efdbe97f985fbd4b4a3a25"
+    "storageHash": "c966112ee289a680f2eed4cdf155bc1b0426185ef2ebda1a5d5c0a2e14b34871"
   },
   "execution": {
     "executionHash": "6a16b8ff9f9533b7d48194eeb95ffffc7508d3c2a6416861ee41e024191c50f9",

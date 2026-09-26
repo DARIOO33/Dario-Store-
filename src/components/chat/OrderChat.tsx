@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import MessageBubble from "@/src/components/chat/MessageBubble";
 import PaymentBar, { PaymentSentBox } from "@/src/components/chat/PaymentBar";
 import { useOrderChat } from "@/src/components/chat/useOrderChat";
+import ChatReviewCard from "@/src/components/chat/ChatReviewCard";
 import { usePhotoAttachment } from "@/src/components/chat/usePhotoAttachment";
 import { SENSITIVE_MESSAGE_DAYS, STORE_NAME } from "@/src/lib/store";
 import { useT } from "@/src/i18n/client";
@@ -68,6 +69,19 @@ export default function OrderChat({ orderId, asAdmin }: { orderId: string; asAdm
           <h2>{asAdmin ? t("chat.withCustomer") : t("chat.withStore", { name: STORE_NAME })}</h2>
           <p className="muted">{t("chat.private")}</p>
         </div>
+        {/* A delivered order's chat stays open until the team closes it. */}
+        {asAdmin && chat.loaded && chat.closure !== "cancelled" && (
+          <button
+            type="button"
+            className="btn btnGhost"
+            disabled={chat.busy}
+            onClick={() => {
+              if (chat.closure === "store" || confirm(t("chat.closeConfirm"))) chat.setClosed(chat.closure !== "store");
+            }}
+          >
+            {chat.closure === "store" ? t("chat.reopenChat") : t("chat.closeChat")}
+          </button>
+        )}
       </header>
 
       <p className="chatSafety">
@@ -76,7 +90,7 @@ export default function OrderChat({ orderId, asAdmin }: { orderId: string; asAdm
 
       <PaymentBar
         payment={chat.payment}
-        closed={chat.closed}
+        closed={chat.closure === "cancelled"}
         asAdmin={asAdmin}
         busy={chat.busy}
         onAskNewProof={chat.askNewProof}
@@ -92,10 +106,11 @@ export default function OrderChat({ orderId, asAdmin }: { orderId: string; asAdm
         {chat.messages.map((message) => (
           <MessageBubble key={message.id} message={message} asAdmin={asAdmin} onImageLoad={scrollToBottom} onWipe={chat.wipe} />
         ))}
+        {chat.review && <ChatReviewCard review={chat.review} onSaved={chat.refresh} />}
       </div>
 
       {chat.closed ? (
-        <p className="chatClosed">{t("chat.closed")}</p>
+        <p className="chatClosed">{chat.closure === "cancelled" ? t("chat.closed") : asAdmin ? t("chat.closedByYou") : t("chat.closedByStore")}</p>
       ) : (
         <form className="chatForm" onSubmit={handleSubmit}>
           {preview && (

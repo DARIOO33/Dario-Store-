@@ -1,0 +1,385 @@
+======================================================================
+ Dario Store: review from the chat + "Close chat" button
+ Date:     2026-09-26 01:50:52 CET
+ Branch:   main @ a13ecdb (changes not committed yet)
+======================================================================
+
+SUMMARY
+  Feature 1  Once an order is DELIVERED, the customer gets a review card at the end of the chat:
+             stars, optional message, "hide my name"; saved through the normal review action
+             (buyers only, name masking and product rating updates all still apply).
+  Feature 2  The chat no longer depends on the order status to stay open (only a cancelled
+             order's chat closes by itself). The team (admin and staff) has a "Close chat" /
+             "Reopen chat" button; the customer is told in the chat, in their language.
+  Database   one new nullable column Order.chatClosedAt (additive, no data changed).
+  IMPORTANT  "npm run db:update" was writing to a LOCAL Postgres, not to the Supabase database
+             the app uses (see "Database" below). Fixed in prisma.config.ts.
+  Tests      226 passed in 19 files (21 new); typecheck, lint and production build pass.
+  Live       checked in a real browser (Playwright, production build) as customer and staff,
+             with temporary zz- test data that was deleted afterwards.
+
+======================================================================
+HOW IT WORKS
+======================================================================
+Customer side (order page chat):
+  - DELIVERED order: a "Delivered / How was your order?" card after the messages, one entry per
+    product still in the shop. Already reviewed: stars + "Reviewed" + "Edit" (opens the form
+    filled in). Reviews can still be posted when the chat is closed.
+  - Chat closed by the store: the message box is replaced by "The store closed this
+    conversation. Need anything else? Contact us and we'll reopen it."
+Team side (admin order page, admin and staff):
+  - "Close chat" button next to the chat title (asks for confirmation). Posts "The store closed
+    this conversation. Thanks for your order!" in the chat (customer's language), then nobody
+    can write. "Reopen chat" posts "The store reopened this conversation."
+  - Not shown on cancelled orders (their chat stays closed; the server refuses to reopen).
+  - Team members never see the review card.
+
+Rules on the server (not just hidden buttons):
+  - MessageService.send refuses messages in a closed chat, from either side
+    (errors.chatClosedByStore), and in a cancelled order's chat (errors.chatClosed).
+  - MessageService.setClosed: team only (accessFor with the team side), customers and guests
+    get errors.writeDenied; setChatClosedAction requires ADMIN or STAFF.
+  - ReviewService.forOrderChat: only the order's owner, only once DELIVERED.
+
+Files:
+  src/prisma/contract.prisma (+ contract.json/.d.ts)  Order.chatClosedAt
+  src/prisma/orders.ts                                OrderRepository.setChatClosed
+  src/services/messages.ts                            closure, setClosed, review in open()
+  src/services/reviews.ts                             ReviewService.forOrderChat
+  src/actions/messages.ts                             setChatClosedAction (team)
+  src/components/chat/ChatReviewCard.tsx (new)        the review card
+  src/components/chat/OrderChat.tsx, useOrderChat.ts  button, closed notes, card
+  src/styles/chat.css                                 .chatHead, .chatReview* (tokens only)
+  src/i18n/messages/en.ts + fr.ts                     new texts in both languages
+  prisma.config.ts                                    loads .env (see below)
+  CLAUDE.md                                           db:update note, chat-closing rule
+
+======================================================================
+DATABASE: what happened and what was fixed
+======================================================================
+1. Local:    npm run db:update (dry run first): 1 additive operation
+             ALTER TABLE "public"."order" ADD COLUMN "chatClosedAt" timestamptz -> applied.
+2. Problem:  creating the test order failed with "column order.chatClosedAt does not exist".
+             Cause: npm run db:update does not read .env, so prisma.config.ts used its fallback
+             postgresql://...@localhost:5432/membership (a local Postgres), while the app uses
+             DATABASE_URL from .env (Supabase, aws-0-eu-central-1.pooler.supabase.com:6543).
+             The column had been added to the local database only.
+3. Supabase: dry run with .env loaded: exactly 1 additive operation, nothing dropped
+             (warning shown: "control policy suppressed: namespace __unbound__", informational).
+             Applied: "Applied 1 operation(s) across 1 space(s), signature updated".
+             Second dry run: "Planned 0 operation(s)".
+4. Fix:      prisma.config.ts now does import "dotenv/config" (like src/lib/auth.ts), so
+             npm run db:update targets the app's database. A DATABASE_URL exported in the shell
+             still wins (dotenv never overrides it). Checked: npm run db:update -- --dry-run now
+             plans 0 operations against Supabase.
+   Note:     the local Postgres (localhost:5432/membership) also got the column; harmless.
+             Earlier schema changes were already in Supabase (its plan showed only this one
+             column), so nothing else was missing there.
+
+======================================================================
+LIVE CHECK (Playwright + Chromium, npm run build + next start on port 3100)
+======================================================================
+Temporary data (all zz-/ZZ, deleted afterwards): product "ZZ Test Castor IEM", customer
+zz-chat-customer@example.tn, staff zz-chat-staff@example.tn, one DELIVERED order with 2 messages.
+
+customer: review card visible: true
+customer: message box visible (chat still open after delivery): true
+customer: close button visible (must be false): false
+screenshot 1-customer-delivered
+customer: error without stars: Choose a rating from 1 to 5 stars.
+customer: after posting -> ★★★★★ ReviewedEdit
+screenshot 2-customer-reviewed
+staff: review card visible (must be false): false
+screenshot 3-staff-open
+staff: closed note -> This conversation is closed: the customer can't write any more.
+screenshot 4-staff-closed
+customer: closed note -> The store closed this conversation. Need anything else? Contact us and we'll reopen it.
+customer: message box visible (must be false): false
+customer: review card still visible: true
+customer: system message -> The store closed this conversation. Thanks for your order!
+screenshot 5-customer-closed
+phone: horizontal overflow (must be false): false
+screenshot 6-phone-closed
+customer after reopen: message box visible: true
+customer: last system message -> The store reopened this conversation.
+edit form prefilled: Great bass, fast delivery. (zz visual test)     (after the CSS tweak below)
+review on the product page /products/<zz slug>: found (text and author name)
+
+Design check (screenshots looked at, not only generated):
+  - Card uses the shop's style: green "Delivered" tag, Anton uppercase title, dashed separator,
+    orange stars with ink shadow, orange "Post review" button. Header without the button looks
+    as before. Phone (390 px): no horizontal scroll.
+  - Found: the message box (7rem, the site default) made the card taller than the chat window,
+    pushing its title out of view. Fixed: .chatReviewItem textarea.input { min-height: 3.6rem }
+    (77 px). Rebuilt and re-checked: title, stars, text and hide-name all visible.
+
+Clean-up (checked in the database afterwards):
+  - One setup run failed half-way (before the Supabase column existed) and a later leftover
+    product "zz-test-castor-1790383047659" was found by the final check; it had 0 order items
+    and 0 reviews and was deleted (the first delete attempt did nothing: the script had not
+    loaded .env; the second one did).
+  - Final state: zz test users 0, zz test products 0, zz test orders 0. Temporary scripts
+    removed. Server stopped by PID; port 3000 never used. zz-count.mts is the owner's
+    (committed in d6a9cd4) and was left untouched. Playwright was installed in the scratchpad,
+    not in the project (package.json unchanged).
+
+======================================================================
+ALL UNIT TESTS: npx vitest run --reporter=verbose
+======================================================================
+
+ RUN  v5.0.2 /home/dario/Documents/dev/membership
+
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentSentBox (customer's Payment sent button) > is hidden when the customer can't mark the payment as sent 267ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentSentBox (customer's Payment sent button) > stays disabled until a proof photo is uploaded 45ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > shows the customer's own message as theirs 267ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > labels store messages with the store name for the customer 18ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > shows admins which staff member wrote a store message 19ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > shows the photo through the private image route 54ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentSentBox (customer's Payment sent button) > calls onMarkSent once the proof is there 44ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentSentBox (customer's Payment sent button) > is disabled while another action runs 24ms
+ ✓ src/components/chat/ChatReviewCard.test.tsx > ChatReviewCard > asks the customer to rate each product 387ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentBar (banner above the messages) > tells the customer the store is checking their payment 102ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentBar (banner above the messages) > lets the admin ask for a new proof 45ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentBar (banner above the messages) > shows the order's stage instead once the payment is confirmed 29ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > hides login details until the person taps Show 100ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > deletes login details only after confirming 68ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > shows a deleted notice instead of wiped login details 30ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentBar (banner above the messages) > shows nothing on a cancelled order 29ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > speaks French when the visitor chose French 35ms
+ ✓ src/components/chat/ChatReviewCard.test.tsx > ChatReviewCard > shows an existing review as done, with an Edit button that opens the form filled in 171ms
+ ✓ src/components/chat/ChatReviewCard.test.tsx > ChatReviewCard > needs a star rating before sending 593ms
+ ✓ src/components/chat/ChatReviewCard.test.tsx > ChatReviewCard > posts the review through the normal review action, then refreshes the chat 228ms
+ ✓ src/components/chat/ChatReviewCard.test.tsx > ChatReviewCard > previews the masked name when 'hide my name' is ticked 73ms
+ ✓ src/components/chat/ChatReviewCard.test.tsx > ChatReviewCard > shows the server's error (for example: not a buyer) 145ms
+ ✓ src/components/chat/ChatReviewCard.test.tsx > ChatReviewCard > speaks French 51ms
+ ✓ src/services/messages.test.ts > who can use a chat > lets the order's owner open it 17ms
+ ✓ src/services/messages.test.ts > who can use a chat > lets an admin or a staff member open it as the store 4ms
+ ✓ src/services/messages.test.ts > who can use a chat > signs a staff member's message with their name for the team 6ms
+ ✓ src/services/messages.test.ts > who can use a chat > refuses guests, other customers and customers pretending to be the store 4ms
+ ✓ src/services/messages.test.ts > who can use a chat > refuses an order that doesn't exist 1ms
+ ✓ src/services/messages.test.ts > opening a chat > marks the other side's messages as read 2ms
+ ✓ src/services/messages.test.ts > opening a chat > shows the staff member's name to admins only 2ms
+ ✓ src/services/messages.test.ts > opening a chat > lets the customer mark an online payment as sent while the order is pending 1ms
+ ✓ src/services/messages.test.ts > opening a chat > has no payment button for cash on delivery 1ms
+ ✓ src/services/messages.test.ts > opening a chat > lets the admin ask for a new proof once the customer said they paid 3ms
+ ✓ src/services/messages.test.ts > opening a chat > shows the stage once the order is paid 2ms
+ ✓ src/services/messages.test.ts > opening a chat > reports a cancelled order's chat as closed 1ms
+ ✓ src/services/messages.test.ts > sending a message > saves trimmed text with the sender 2ms
+ ✓ src/services/messages.test.ts > sending a message > refuses empty and too long messages 5ms
+ ✓ src/services/messages.test.ts > sending a message > refuses messages on a cancelled order 1ms
+ ✓ src/services/messages.test.ts > sending a message > slows down someone sending too many messages 2ms
+ ✓ src/services/messages.test.ts > sending a message > stores a photo with the type read from its bytes 3ms
+ ✓ src/services/messages.test.ts > sending a message > refuses photos that are not JPG/PNG/WebP, empty or too large 2ms
+ ✓ src/services/messages.test.ts > sending a message > refuses photos on cash-on-delivery orders 1ms
+ ✓ src/services/messages.test.ts > wiping login details > deletes the photo and blanks a sensitive message 1ms
+ ✓ src/services/messages.test.ts > wiping login details > won't wipe ordinary messages or messages from another order 2ms
+ ✓ src/services/messages.test.ts > getting a chat photo > gives the photo to the owner and to the team 11ms
+ ✓ src/services/messages.test.ts > getting a chat photo > gives nothing to guests or other customers 1ms
+ ✓ src/services/messages.test.ts > getting a chat photo > gives nothing when the photo can't be read 1ms
+ ✓ src/services/messages.test.ts > unread badges > counts unread store messages per order for the customer 2ms
+ ✓ src/services/messages.test.ts > closing the chat (the team's button) > a delivered order's chat stays open until the team closes it 9ms
+ ✓ src/services/messages.test.ts > closing the chat (the team's button) > lets admin and staff close it, and tells the customer in their language 7ms
+ ✓ src/services/messages.test.ts > closing the chat (the team's button) > refuses customers, guests and strangers 1ms
+ ✓ src/services/messages.test.ts > closing the chat (the team's button) > does nothing when it is already in that state, and never reopens a cancelled order 5ms
+ ✓ src/services/messages.test.ts > closing the chat (the team's button) > reopens it with a message 1ms
+ ✓ src/services/messages.test.ts > closing the chat (the team's button) > once closed, nobody can write (the team reopens first) 2ms
+ ✓ src/services/messages.test.ts > closing the chat (the team's button) > still reports a cancelled order's chat as closed by the cancellation 1ms
+ ✓ src/services/messages.test.ts > the review card in the chat > is given to the customer, never to the team 2ms
+ ✓ src/services/messages.test.ts > the review card in the chat > stays available after the chat is closed 1ms
+ ✓ src/services/reviews.test.ts > writing a review > lets a customer who paid for the product review it, and updates the product's rating 11ms
+ ✓ src/services/reviews.test.ts > writing a review > refuses guests and people who didn't buy (or only have a pending / cancelled order) 8ms
+ ✓ src/services/reviews.test.ts > writing a review > refuses ratings outside 1 to 5 and messages over 1000 characters 7ms
+ ✓ src/services/reviews.test.ts > writing a review > masks the name before saving when the customer hides it 2ms
+ ✓ src/services/reviews.test.ts > writing a review > [fixed] cuts a very long account name before showing it publicly 3ms
+ ✓ src/services/reviews.test.ts > writing a review > edits the existing review instead of adding a second one 3ms
+ ✓ src/services/reviews.test.ts > deleting a review > lets the author and admins delete it, and refreshes the rating 3ms
+ ✓ src/services/reviews.test.ts > deleting a review > refuses anyone else 2ms
+ ✓ src/services/reviews.test.ts > admin moderation > hiding a review updates the product's rating 2ms
+ ✓ src/services/reviews.test.ts > admin moderation > keeps replies under 600 characters 6ms
+ ✓ src/services/reviews.test.ts > review links on an order > are only for the owner of a paid order 3ms
+ ✓ src/services/reviews.test.ts > the review card in a delivered order's chat > lists each product once, with the customer's review when there is one 2ms
+ ✓ src/services/reviews.test.ts > the review card in a delivered order's chat > is only for the owner, and only once the order is delivered 2ms
+ ✓ src/services/reviews.test.ts > the review card in a delivered order's chat > is empty when every product was deleted from the shop 1ms
+ ✓ src/services/products.test.ts > admin product form > stores the price in millimes and makes a slug from the name 12ms
+ ✓ src/services/products.test.ts > admin product form > adds -2 when the slug is taken, and never changes a slug on rename 4ms
+ ✓ src/services/products.test.ts > admin product form > refuses negative, too precise or non-numeric prices and stock 9ms
+ ✓ src/services/products.test.ts > admin product form > only accepts https (or site) image addresses, at most 8 2ms
+ ✓ src/services/products.test.ts > admin product form > takes the lowest active variant price as the product price 2ms
+ ✓ src/services/products.test.ts > admin product form > refuses duplicate variant names and all-inactive variants 2ms
+ ✓ src/services/products.test.ts > admin product form > refuses an upload that is not really a photo 2ms
+ ✓ src/services/availability.test.ts > AvailabilityService > uses 15 minutes when nothing was set, and ignores an 'away' that has passed 19ms
+ ✓ src/services/availability.test.ts > AvailabilityService > accepts a response time between 1 minute and 24 hours 8ms
+ ✓ src/services/availability.test.ts > AvailabilityService > accepts an 'away until' in the next 60 days only 88ms
+ ✓ src/services/orders.test.ts > placing an order: prices and stock come from the database > prices the order from the database and takes the stock 24ms
+ ✓ src/services/orders.test.ts > placing an order: prices and stock come from the database > ignores any price the browser sends 3ms
+ ✓ src/services/orders.test.ts > placing an order: prices and stock come from the database > gives free shipping from 150 DT of physical items 3ms
+ ✓ src/services/orders.test.ts > placing an order: prices and stock come from the database > refuses more than the stock, hidden products and unknown products 7ms
+ ✓ src/services/orders.test.ts > placing an order: prices and stock come from the database > refuses a product with options unless an active option is chosen 3ms
+ ✓ src/services/orders.test.ts > placing an order: prices and stock come from the database > fails cleanly when someone else bought the last item meanwhile 4ms
+ ✓ src/services/orders.test.ts > placing an order: abuse checks > [fixed] does not let the same product be split into many lines to pass the per-line limit 2ms
+ ✓ src/services/orders.test.ts > placing an order: abuse checks > still merges duplicate lines that stay under the limit 3ms
+ ✓ src/services/orders.test.ts > placing an order: abuse checks > [fixed] refuses a cart with an absurd number of lines 3ms
+ ✓ src/services/orders.test.ts > placing an order: abuse checks > refuses zero, negative and fractional quantities 4ms
+ ✓ src/services/orders.test.ts > placing an order: abuse checks > [fixed] refuses pages of text in the checkout fields (they go into admin and customer emails) 5ms
+ ✓ src/services/orders.test.ts > placing an order: abuse checks > names the too-long field in the customer's language 1ms
+ ✓ src/services/orders.test.ts > placing an order: abuse checks > limits one email to 5 orders an hour 1ms
+ ✓ src/services/orders.test.ts > placing an order: abuse checks > checks the contact details 3ms
+ ✓ src/services/orders.test.ts > placing an order: digital products and payment > needs an account for digital products 2ms
+ ✓ src/services/orders.test.ts > placing an order: digital products and payment > only accepts the payment methods the shop offers (never cash on delivery for digital) 5ms
+ ✓ src/services/orders.test.ts > placing an order: digital products and payment > places a digital order for a signed-in customer, with no shipping and no guest link 1ms
+ ✓ src/services/orders.test.ts > who can see an order > shows a guest order only with its secret link 2ms
+ ✓ src/services/orders.test.ts > who can see an order > shows an account order to its owner and the team (admin, staff) only 1ms
+ ✓ src/services/orders.test.ts > changing an order's status > puts the stock back when an order is cancelled 2ms
+ ✓ src/services/orders.test.ts > changing an order's status > a double-clicked cancel puts the stock back only once (the stock compare-and-swap already ensured this) 1ms
+ ✓ src/services/orders.test.ts > changing an order's status > [fixed] a customer's cancel can't undo a payment the admin just confirmed 1ms
+ ✓ src/services/orders.test.ts > changing an order's status > keeps a cancelled order cancelled 4ms
+ ✓ src/services/orders.test.ts > changing an order's status > never marks an order with nothing to ship as Shipped 1ms
+ ✓ src/services/orders.test.ts > changing an order's status > sends the 'payment confirmed' message only the first time 2ms
+ ✓ src/services/orders.test.ts > customer cancelling > only lets the owner (or the guest link) cancel, and only while pending 1ms
+ ✓ src/services/orders.test.ts > the customer's 'Payment sent' > marks the payment submitted and tells the store 2ms
+ ✓ src/services/orders.test.ts > the customer's 'Payment sent' > is refused for other people, without a proof, on cash orders and twice 2ms
+ ✓ src/services/orders.test.ts > the customer's 'Payment sent' > [fixed] two 'Payment sent' clicks at the same moment tell the store only once 2ms
+ ✓ src/services/orders.test.ts > admin payment tools > asks for a new proof only when one is waiting, and only once 2ms
+ ✓ src/services/orders.test.ts > admin payment tools > marks refunded only a cancelled order whose money was received 2ms
+ ✓ src/services/orders.test.ts > admin payment tools > never sends the delivery email for an unpaid order 1ms
+ ✓ src/services/shipments.test.ts > public tracking page > masks the customer's name, phone and address on the server 73ms
+ ✓ src/services/shipments.test.ts > public tracking page > never includes internal notes, the AliExpress link or the contact channel 7ms
+ ✓ src/services/shipments.test.ts > public tracking page > returns nothing for an unknown or malformed code 4ms
+ ✓ src/services/shipments.test.ts > admin shipment form > creates a shipment with an unguessable tracking code 3ms
+ ✓ src/services/shipments.test.ts > admin shipment form > only accepts http(s) links, so no javascript: link can reach a page 5ms
+ ✓ src/services/shipments.test.ts > admin shipment form > validates names, quantity, phone, date and text lengths 10ms
+ ✓ src/services/shipments.test.ts > admin shipment form > rejects fields that are not text (a hand-made request) 3ms
+ ✓ src/services/shipments.test.ts > admin shipment form > won't remove the first timeline entry, or an entry from another shipment 3ms
+ ✓ src/actions/access.test.ts > admin-only server actions > covers every team action exported from src/actions 8ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setAvailableAction refuses guests, customers and staff without touching any service 20ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setAwayAction refuses guests, customers and staff without touching any service 5ms
+ ✓ src/actions/access.test.ts > admin-only server actions > createCategoryAction refuses guests, customers and staff without touching any service 4ms
+ ✓ src/actions/access.test.ts > admin-only server actions > renameCategoryAction refuses guests, customers and staff without touching any service 4ms
+ ✓ src/actions/access.test.ts > admin-only server actions > deleteCategoryAction refuses guests, customers and staff without touching any service 2ms
+ ✓ src/actions/access.test.ts > admin-only server actions > updateCategorySettingsAction refuses guests, customers and staff without touching any service 3ms
+ ✓ src/actions/access.test.ts > admin-only server actions > uploadProductImageAction refuses guests, customers and staff without touching any service 5ms
+ ✓ src/actions/access.test.ts > admin-only server actions > createProductAction refuses guests, customers and staff without touching any service 12ms
+ ✓ src/actions/access.test.ts > admin-only server actions > updateProductAction refuses guests, customers and staff without touching any service 20ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setProductFeaturedAction refuses guests, customers and staff without touching any service 6ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setProductActiveAction refuses guests, customers and staff without touching any service 13ms
+ ✓ src/actions/access.test.ts > admin-only server actions > deleteProductAction refuses guests, customers and staff without touching any service 2ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setReviewHiddenAction refuses guests, customers and staff without touching any service 5ms
+ ✓ src/actions/access.test.ts > admin-only server actions > replyToReviewAction refuses guests, customers and staff without touching any service 5ms
+ ✓ src/actions/access.test.ts > admin-only server actions > markRefundedAction refuses guests, customers and staff without touching any service 18ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setAvailableAction works for an admin 17ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setAwayAction works for an admin 3ms
+ ✓ src/actions/access.test.ts > admin-only server actions > createCategoryAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > renameCategoryAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > deleteCategoryAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > updateCategorySettingsAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > uploadProductImageAction works for an admin 2ms
+ ✓ src/actions/access.test.ts > admin-only server actions > createProductAction works for an admin 4ms
+ ✓ src/actions/access.test.ts > admin-only server actions > updateProductAction works for an admin 8ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setProductFeaturedAction works for an admin 2ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setProductActiveAction works for an admin 5ms
+ ✓ src/actions/access.test.ts > admin-only server actions > deleteProductAction works for an admin 27ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setReviewHiddenAction works for an admin 4ms
+ ✓ src/actions/access.test.ts > admin-only server actions > replyToReviewAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > markRefundedAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > createShipmentAction refuses guests and customers without touching any service 2ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > updateShipmentAction refuses guests and customers without touching any service 13ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > addShipmentUpdateAction refuses guests and customers without touching any service 5ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > removeShipmentEventAction refuses guests and customers without touching any service 4ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > deleteShipmentAction refuses guests and customers without touching any service 2ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > sendDeliveryEmailAction refuses guests and customers without touching any service 6ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > previewDeliveryEmailAction refuses guests and customers without touching any service 14ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > setOrderStatusAction refuses guests and customers without touching any service 5ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > requestNewProofAction refuses guests and customers without touching any service 16ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > setChatClosedAction refuses guests and customers without touching any service 4ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > createShipmentAction works for staff and for an admin 13ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > updateShipmentAction works for staff and for an admin 6ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > addShipmentUpdateAction works for staff and for an admin 8ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > removeShipmentEventAction works for staff and for an admin 2ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > deleteShipmentAction works for staff and for an admin 11ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > sendDeliveryEmailAction works for staff and for an admin 3ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > previewDeliveryEmailAction works for staff and for an admin 15ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > setOrderStatusAction works for staff and for an admin 5ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > requestNewProofAction works for staff and for an admin 2ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > setChatClosedAction works for staff and for an admin 1ms
+ ✓ src/actions/access.test.ts > team server actions (admin and staff) > refuses an order status that doesn't exist, even for the admin 1ms
+ ✓ src/actions/access.test.ts > customer actions pass who is calling to the service (which checks it) > never lets the browser choose the user id of an order 6ms
+ ✓ src/actions/access.test.ts > customer actions pass who is calling to the service (which checks it) > rejects a cart whose lines are not the expected shape 7ms
+ ✓ src/actions/access.test.ts > customer actions pass who is calling to the service (which checks it) > rejects a chat attachment that is not a file 15ms
+ ✓ src/services/catalog.test.ts > cart lines > gives fresh name, price and stock for products on sale 12ms
+ ✓ src/services/catalog.test.ts > cart lines > [fixed] says nothing about a product the admin switched off, even with its id 3ms
+ ✓ src/services/catalog.test.ts > cart lines > reads at most 50 lines 4ms
+ ✓ src/services/catalog.test.ts > cart lines > marks a line unavailable when its option was removed 2ms
+ ✓ src/test/access-rules.test.ts > admin pages > finds the admin pages 38ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/categories/page.tsx checks the role itself 4ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/orders/[id]/page.tsx checks the role itself 12ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/orders/page.tsx checks the role itself 2ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/page.tsx checks the role itself 8ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/products/[id]/page.tsx checks the role itself 1ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/products/new/page.tsx checks the role itself 6ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/products/page.tsx checks the role itself 1ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/reviews/page.tsx checks the role itself 4ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/shipments/[id]/page.tsx checks the role itself 7ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/shipments/new/page.tsx checks the role itself 4ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/shipments/page.tsx checks the role itself 1ms
+ ✓ src/test/access-rules.test.ts > admin pages > lets staff into the order and shipment pages only 16ms
+ ✓ src/test/access-rules.test.ts > server actions > src/actions/availability.ts: every exported action checks the caller or is deliberately public 6ms
+ ✓ src/test/access-rules.test.ts > server actions > src/actions/catalog.ts: every exported action checks the caller or is deliberately public 3ms
+ ✓ src/test/access-rules.test.ts > server actions > src/actions/categories.ts: every exported action checks the caller or is deliberately public 25ms
+ ✓ src/test/access-rules.test.ts > server actions > src/actions/locale.ts: every exported action checks the caller or is deliberately public 1ms
+ ✓ src/test/access-rules.test.ts > server actions > src/actions/messages.ts: every exported action checks the caller or is deliberately public 2ms
+ ✓ src/test/access-rules.test.ts > server actions > src/actions/orders.ts: every exported action checks the caller or is deliberately public 1ms
+ ✓ src/test/access-rules.test.ts > server actions > src/actions/products.ts: every exported action checks the caller or is deliberately public 2ms
+ ✓ src/test/access-rules.test.ts > server actions > src/actions/reviews.ts: every exported action checks the caller or is deliberately public 1ms
+ ✓ src/test/access-rules.test.ts > server actions > src/actions/shipments.ts: every exported action checks the caller or is deliberately public 1ms
+ ✓ src/lib/crypto.test.ts > chat text encryption > encrypts and decrypts a message with the key 14ms
+ ✓ src/lib/crypto.test.ts > chat text encryption > gives a different ciphertext each time for the same text 5ms
+ ✓ src/lib/crypto.test.ts > chat text encryption > stores plain text when no key is set 2ms
+ ✓ src/lib/crypto.test.ts > chat text encryption > passes old plaintext messages through unchanged 1ms
+ ✓ src/lib/crypto.test.ts > chat text encryption > shows the locked text when the key is wrong or missing 3ms
+ ✓ src/lib/crypto.test.ts > chat text encryption > refuses a key that is not 32 bytes 4ms
+ ✓ src/lib/crypto.test.ts > chat photo encryption > round-trips a photo's base64 5ms
+ ✓ src/lib/crypto.test.ts > chat photo encryption > returns null for a photo it cannot decrypt 3ms
+ ✓ src/lib/shipments.test.ts > normalizeTrackingCode > accepts the code however it is typed 16ms
+ ✓ src/lib/shipments.test.ts > normalizeTrackingCode > returns an empty code for anything else 2ms
+ ✓ src/lib/money.test.ts > money (integer millimes) > parses dinars typed by the admin 30ms
+ ✓ src/lib/money.test.ts > money (integer millimes) > refuses negative, over-precise, huge or non-numeric amounts 3ms
+ ✓ src/lib/money.test.ts > money (integer millimes) > formats millimes the same way in every language 4ms
+ ✓ src/lib/email-templates.test.ts > email templates escape customer text > in the order confirmation 24ms
+ ✓ src/lib/email-templates.test.ts > email templates escape customer text > in the admin's new-order alert 12ms
+ ✓ src/lib/email-templates.test.ts > email templates escape customer text > in the delivery email (the admin's text is shown as text, line breaks kept) 8ms
+ ✓ src/lib/image-type.test.ts > sniffImageType > recognises JPEG, PNG and WebP from their first bytes 15ms
+ ✓ src/lib/image-type.test.ts > sniffImageType > rejects SVG, other RIFF files and random bytes 4ms
+ ✓ src/lib/mask.test.ts > masking personal details > keeps only the first and last letter of each name 9ms
+ ✓ src/lib/mask.test.ts > masking personal details > hides all but the last 3 digits of a phone 3ms
+ ✓ src/lib/mask.test.ts > masking personal details > hides house numbers completely 1ms
+ ✓ src/lib/mask.test.ts > masking personal details > masks an email for the chat 2ms
+ ✓ src/lib/after-login.test.ts > coming back after login (no open redirect) > follows a path on this site 21ms
+ ✓ src/lib/after-login.test.ts > coming back after login (no open redirect) > never sends people to another site 5ms
+
+ Test Files  19 passed (19)
+      Tests  226 passed (226)
+   Start at  01:50:56
+   Duration  23.88s (environment 39%, setup 24%, transform 15%, import 12%, tests 9%, worker 1%)
+
+
+exit code: 0
+
+== TYPECHECK: npm run typecheck
+
+> membership@0.1.0 typecheck
+> tsc --noEmit
+
+exit code: 0
+
+== LINT: npm run lint
+
+> membership@0.1.0 lint
+> eslint
+
+exit code: 0
+
+== PRODUCTION BUILD (the build used for the last live check; only CLAUDE.md changed since)
+> node scripts/prepare-standalone.mjs
+
+standalone server ready: npm run start:prod
+exit code: 0

@@ -267,3 +267,71 @@
 .chatSecret {
   font-size: 0.85rem;
 }
+
+/* The team's "Close chat" button sits to the right of the chat title. */
+.chatHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+}
+
+/* Review card at the end of a delivered order's chat (customer side). */
+.chatReview {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 0.4rem;
+  padding: 0.9rem 1rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  background: var(--card);
+}
+
+.chatReview h3 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 400;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.chatReviewKicker {
+  justify-self: start;
+  padding: 0.2rem 0.5rem;
+  background: var(--green-soft);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.chatReviewItem {
+  display: grid;
+  gap: 0.5rem;
+  padding-top: 0.7rem;
+  border-top: 1px dashed var(--ink);
+}
+
+.chatReviewItem .starPicker label {
+  font-size: 1.7rem;
+}
+
+.chatReviewItem .btn {
+  justify-self: start;
+}
+
+/* The chat window is short: keep the optional message box to about two lines. */
+.chatReviewItem textarea.input {
+  min-height: 3.6rem;
+}
+
+.chatReviewDone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}

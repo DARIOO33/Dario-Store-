@@ -46,6 +46,17 @@ export async function wipeChatMessageAction(orderId: string, asAdmin: boolean, m
   });
 }
 
+// The team's "Close chat" / "Reopen chat" button.
+export async function setChatClosedAction(orderId: string, closed: boolean) {
+  const user = await requireRole(...TEAM);
+
+  return await safely(async () => {
+    await MessageService.setClosed(String(orderId), user, closed === true);
+    revalidatePath("/admin", "layout");
+    revalidatePath(`/order/${orderId}`);
+  });
+}
+
 export async function markPaymentSentAction(orderId: string) {
   const user = await getCurrentUser();
   const locale = await getLocale();
