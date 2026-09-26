@@ -193,6 +193,12 @@ export const MessageService = {
     const message = await MessageRepository.create({ orderId, fromAdmin: access.asAdmin, senderUserId: viewer!.id, body, hasImage: !!image, sensitive });
     if (image && mimeType) await ChatImages.save(message.id, { bytes: image.bytes, mimeType });
 
+    // The team hears about a customer's message by email, once per unread batch: only when this is
+    // the only customer message they haven't read yet.
+    if (!access.asAdmin && (await MessageRepository.findUnread(false, [orderId])).length === 1) {
+      void OrderNotifications.customerMessage(access.order, !!image);
+    }
+
     return { message: toChat({ ...message, sender: access.asAdmin ? { name: viewer!.name ?? "" } : null }, access.asAdmin) };
   },
 

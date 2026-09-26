@@ -35,17 +35,17 @@ async function fulfilmentText(order: OrderRow) {
 
 const hasDigitalItems = (order: OrderRow) => order.items.some((item) => item.productType === "VIRTUAL");
 
-// Who hears about new orders: ADMIN_NOTIFY_EMAIL (comma-separated) if set, otherwise every admin account.
-async function adminAddresses() {
+// Who hears about orders and customer messages: the admins (ADMIN_NOTIFY_EMAIL, comma-separated, if set;
+// otherwise every admin account) and every staff account. Each address once.
+async function teamAddresses() {
   const configured = (process.env.ADMIN_NOTIFY_EMAIL ?? "").split(",").map((email) => email.trim()).filter(Boolean);
-  if (configured.length > 0) return configured;
-
-  const admins = await UserRepository.findAdmins();
-  return admins.map((admin) => admin.email);
+  const admins = configured.length > 0 ? configured : (await UserRepository.findAdmins()).map((admin) => admin.email);
+  const staff = (await UserRepository.findStaff()).map((member) => member.email);
+  return [...new Set([...admins, ...staff].map((email) => email.toLowerCase()))];
 }
 
-async function notifyAdmins(order: OrderRow) {
-  const to = await adminAddresses();
+async function notifyTeam(order: OrderRow) {
+  const to = await teamAddresses();
   if (to.length === 0) return;
 
   const email = adminNewOrderEmail({
@@ -64,7 +64,7 @@ async function notifyAdmins(order: OrderRow) {
 export const OrderNotifications = {
   // Right after checkout: a confirmation email with the summary.
   placed: (order: OrderRow) => {
-    void notifyAdmins(order);
+    void notifyTeam(order);
     const email = orderReceivedEmail({
       locale: toLocale(order.locale),
       name: order.customerName,
@@ -86,7 +86,7 @@ export const OrderNotifications = {
 
   // The customer says they've paid: tell the admin to check the proof.
   paymentSent: async (order: OrderRow) => {
-    const to = await adminAddresses();
+    const to = await teamAddresses();
     if (to.length === 0) return;
 
     const email = adminAlertEmail({
@@ -98,10 +98,25 @@ export const OrderNotifications = {
     await sendEmail({ to: to.join(", "), ...email });
   },
 
+  // The customer wrote in the order chat. Sent for the first message the team hasn't read yet (see
+  // MessageService.send), so a burst of messages is one email. The text stays in the encrypted chat.
+  customerMessage: async (order: OrderRow, withPhoto: boolean) => {
+    const to = await teamAddresses();
+    if (to.length === 0) return;
+
+    const email = adminAlertEmail({
+      kicker: "New message",
+      title: `Order #${order.orderNumber}: new message`,
+      intro: `${order.customerName} wrote in the order chat${withPhoto ? " and sent a photo" : ""}. Open the order to answer.`,
+      adminUrl: `${siteUrl()}/admin/orders/${order.id}`,
+    });
+    await sendEmail({ to: to.join(", "), ...email });
+  },
+
   // The customer reopened a closed chat with "Report a problem". The message itself stays in the
   // (encrypted) chat; the email only says that there is one.
   problemReported: async (order: OrderRow, reasonLabel: string) => {
-    const to = await adminAddresses();
+    const to = await teamAddresses();
     if (to.length === 0) return;
 
     const email = adminAlertEmail({

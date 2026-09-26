@@ -19,7 +19,7 @@ vi.mock("../prisma/orders", () => ({
   OrderRepository: { findById: vi.fn(), listForUser: vi.fn(), setChatClosed: vi.fn(), reopenForProblem: vi.fn() },
 }));
 vi.mock("./reviews", () => ({ ReviewService: { forOrderChat: vi.fn() } }));
-vi.mock("./order-notifications", () => ({ OrderNotifications: { problemReported: vi.fn() } }));
+vi.mock("./order-notifications", () => ({ OrderNotifications: { problemReported: vi.fn(), customerMessage: vi.fn() } }));
 vi.mock("./chat-images", () => ({
   ChatImages: { save: vi.fn(), load: vi.fn(), remove: vi.fn() },
 }));
@@ -89,6 +89,7 @@ beforeEach(() => {
   messages.findSensitiveBefore.mockResolvedValue([]);
   messages.countCustomerImages.mockResolvedValue(0);
   messages.countSince.mockResolvedValue(0);
+  messages.findUnread.mockResolvedValue([]);
   messages.create.mockImplementation(async (data) => message({ ...data }));
 });
 
@@ -466,5 +467,34 @@ describe("'Report a problem' on a chat the store closed", () => {
     await expect(MessageService.reportProblem("order-1", customer, "OTHER", "   ")).rejects.toMatchObject({ key: "errors.emptyMessage" });
     await expect(MessageService.reportProblem("order-1", customer, "OTHER", "x".repeat(1001))).rejects.toMatchObject({ key: "errors.messageTooLong" });
     expect(orders.reopenForProblem).not.toHaveBeenCalled();
+  });
+});
+
+describe("emailing the team about customer messages", () => {
+  it("emails the team for the first message they haven't read yet", async () => {
+    messages.findUnread.mockResolvedValue([{ orderId: "order-1" }] as never);
+    await MessageService.send("order-1", customer, false, "Is my key ready?");
+
+    expect(messages.findUnread).toHaveBeenCalledWith(false, ["order-1"]);
+    expect(notifications.customerMessage).toHaveBeenCalledWith(expect.objectContaining({ id: "order-1" }), false);
+  });
+
+  it("says when the message came with a photo (a payment proof)", async () => {
+    messages.findUnread.mockResolvedValue([{ orderId: "order-1" }] as never);
+    await MessageService.send("order-1", customer, false, "", { bytes: PNG });
+    expect(notifications.customerMessage).toHaveBeenCalledWith(expect.anything(), true);
+  });
+
+  it("does not email again while earlier messages are still unread", async () => {
+    messages.findUnread.mockResolvedValue([{ orderId: "order-1" }, { orderId: "order-1" }] as never);
+    await MessageService.send("order-1", customer, false, "Hello again?");
+    expect(notifications.customerMessage).not.toHaveBeenCalled();
+  });
+
+  it("never emails the team about its own messages", async () => {
+    messages.findUnread.mockResolvedValue([{ orderId: "order-1" }] as never);
+    await MessageService.send("order-1", staff, true, "On it!");
+    await MessageService.send("order-1", admin, true, "Done.");
+    expect(notifications.customerMessage).not.toHaveBeenCalled();
   });
 });

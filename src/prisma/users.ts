@@ -6,4 +6,8 @@ export const UserRepository = {
   findAdmins: async () => {
     return await db.orm.public.User.where({ role: "ADMIN" }).all();
   },
+
+  findStaff: async () => {
+    return await db.orm.public.User.where({ role: "STAFF" }).all();
+  },
 };

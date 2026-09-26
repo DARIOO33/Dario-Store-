@@ -91,6 +91,11 @@ npm run seed:store     # demo catalogue
   checkout and on the order page (`availabilityText` in `lib/availability.ts`).
 - SEO: product/category pages set a canonical URL and JSON-LD (`lib/seo.ts`, `components/seo/JsonLd.tsx`). A page
   that sets its own `openGraph` must repeat `siteName` and `images` (it replaces the root one).
+- Team emails (new order, payment sent, new customer chat message, problem reported) go to `teamAddresses()` in
+  `order-notifications.ts`: the admins (`ADMIN_NOTIFY_EMAIL` or every ADMIN account) plus every STAFF account. The
+  chat-message email is sent once per unread batch and never contains the message text.
+- Any screen that tells the customer "we sent you an email / a code" also tells them to check their spam folder
+  (`src/i18n/email-notes.test.ts` checks the known texts; add a new one there).
 - Delivery details typed by the admin are emailed only — never store them in the database or repeat them in the chat.
 - The cart is emptied by the order page (`ClearCartAfterOrder`), not by the cart page; keep the spinner overlay in
   `CartView` up until navigation completes.

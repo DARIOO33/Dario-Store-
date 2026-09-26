@@ -49,7 +49,7 @@ Run `npm run check:ready` (the same list is printed in the server log at every s
 | `CHAT_ENCRYPTION_KEY` | **Copy the exact key from your current `.env`**: a new key can't read existing chats. Keep a copy in a password manager. |
 | `SMTP_*`, `MAIL_FROM` | **Required**: without email, customers can't finish email sign-up (they need the 6-digit code), reset a password or get order emails. |
 | `CLOUDINARY_*` | Product photo uploads and private chat photos. |
-| `ADMIN_NOTIFY_EMAIL` (optional) | Who gets "new order" / "payment sent" emails (default: every admin). |
+| `ADMIN_NOTIFY_EMAIL` (optional) | Admin addresses for the team emails (new order, payment sent, new chat message, problem reported); default: every admin account. Staff accounts always get them too. |
 
 Also before the first real order:
 
@@ -218,8 +218,10 @@ Defined in [src/prisma/contract.prisma](src/prisma/contract.prisma). The better-
   page is built by `ShipmentService.getPublic`, which returns the name, phone and address **already masked**
   (`src/lib/mask.ts`; the `*` runs are then smudged with CSS blur) — the real details, the internal notes, the
   AliExpress link and the contact channel never reach a visitor's browser. Tracking pages are `noindex`.
-- **Admin alerts by email:** a new order and a customer tapping "Payment sent" each email the shop owner
-  (`ADMIN_NOTIFY_EMAIL` in `.env`, comma-separated; empty = every admin account). Sent only once SMTP is set up.
+- **Team alerts by email:** a new order, a customer tapping "Payment sent", a new customer message in an order chat
+  (one email per unread batch, without the text) and "Report a problem" each email the team: the admins
+  (`ADMIN_NOTIFY_EMAIL` in `.env`, comma-separated; empty = every admin account) plus every staff account.
+  Sent only once SMTP is set up.
 - **Order stages in the chat:** once an order is Paid / Shipped / Delivered, the banner above the chat shows that stage
   and its date (`Order.paidAt`, `shippedAt`, `deliveredAt`, stamped by `OrderService.setStatus`).
 - **After payment is confirmed** (admin sets an order with digital items from Pending to Paid), the customer gets an
