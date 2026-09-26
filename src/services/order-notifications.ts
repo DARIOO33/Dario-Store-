@@ -98,6 +98,21 @@ export const OrderNotifications = {
     await sendEmail({ to: to.join(", "), ...email });
   },
 
+  // The customer reopened a closed chat with "Report a problem". The message itself stays in the
+  // (encrypted) chat; the email only says that there is one.
+  problemReported: async (order: OrderRow, reasonLabel: string) => {
+    const to = await adminAddresses();
+    if (to.length === 0) return;
+
+    const email = adminAlertEmail({
+      kicker: "Problem reported",
+      title: `Order #${order.orderNumber}: problem reported`,
+      intro: `${order.customerName} reopened the chat: "${reasonLabel}". Answer them in the order chat.`,
+      adminUrl: `${siteUrl()}/admin/orders/${order.id}`,
+    });
+    await sendEmail({ to: to.join(", "), ...email });
+  },
+
   // The payment was just confirmed: say what to expect, in the chat (account orders) and by email.
   paid: async (order: OrderRow) => {
     if (!hasDigitalItems(order)) return;

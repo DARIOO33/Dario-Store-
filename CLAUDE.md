@@ -65,6 +65,10 @@ npm run seed:store     # demo catalogue
 - Chat closing: only a cancelled order's chat closes by itself. Otherwise it stays open (also after delivery) until
   the team presses "Close chat" (`Order.chatClosedAt`, `MessageService.setClosed`). The customer's review card in a
   delivered order's chat comes from `ReviewService.forOrderChat` and saves through the normal review action.
+- "Report a problem": on a chat the team closed, the customer can reopen it with a reason + message for
+  `PROBLEM_REPORT_DAYS` (lib/store.ts, 30) after delivery, once per 24 h (`Order.problemReportedAt`,
+  `MessageService.reportProblem`, compare-and-swap in `OrderRepository.reopenForProblem`). Admins get an email
+  without the message text. After the window the closed chat shows the `CONTACT` channels.
 - Chat text and photos are encrypted at rest inside `prisma/messages.ts` (`lib/crypto.ts`, key `CHAT_ENCRYPTION_KEY`).
   Always read/write chat rows through `MessageRepository`, never `db.orm.public.OrderMessage` directly, or you'll store
   plaintext / show ciphertext. Never log message bodies. Changing the key makes old messages unreadable.

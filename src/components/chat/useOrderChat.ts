@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { markPaymentSentAction, openChatAction, requestNewProofAction, sendChatMessageAction, setChatClosedAction, wipeChatMessageAction } from "@/src/actions/messages";
-import type { ChatClosure, ChatMessage, ChatPayment, ChatReview } from "@/src/services/messages";
+import type { ChatClosure, ChatMessage, ChatPayment, ChatReview, ProblemReportState } from "@/src/services/messages";
 
 const POLL_MS = 5000;
 
@@ -16,6 +16,7 @@ export function useOrderChat(orderId: string, asAdmin: boolean) {
   const [payment, setPayment] = useState<ChatPayment | null>(null);
   const [closure, setClosure] = useState<ChatClosure>(null);
   const [review, setReview] = useState<ChatReview | null>(null);
+  const [problemReport, setProblemReport] = useState<ProblemReportState | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -29,6 +30,7 @@ export function useOrderChat(orderId: string, asAdmin: boolean) {
     setMessages(result.messages);
     setClosure(result.closure);
     setReview(result.review);
+    setProblemReport(result.problemReport);
     setPayment(result.payment);
     setLoaded(true);
   }, [orderId, asAdmin]);
@@ -93,6 +95,7 @@ export function useOrderChat(orderId: string, asAdmin: boolean) {
     closed: closure !== null,
     closure,
     review,
+    problemReport,
     loaded,
     error,
     busy,

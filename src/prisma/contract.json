@@ -734,6 +734,13 @@
                   "plane": "domain"
                 }
               },
+              "problemReportedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
               "requiresShipping": {
                 "nullable": false,
                 "type": {
@@ -943,6 +950,9 @@
                 },
                 "paymentStatus": {
                   "column": "paymentStatus"
+                },
+                "problemReportedAt": {
+                  "column": "problemReportedAt"
                 },
                 "requiresShipping": {
                   "column": "requiresShipping"
@@ -3128,6 +3138,11 @@
                     "plane": "storage"
                   }
                 },
+                "problemReportedAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
                 "requiresShipping": {
                   "codecId": "pg/bool@1",
                   "default": {
@@ -4832,7 +4847,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "c966112ee289a680f2eed4cdf155bc1b0426185ef2ebda1a5d5c0a2e14b34871"
+    "storageHash": "11b6da80387686fd8551d14c20569a328a8bb7e40dd033d704c78c01ee9b819b"
   },
   "execution": {
     "executionHash": "6a16b8ff9f9533b7d48194eeb95ffffc7508d3c2a6416861ee41e024191c50f9",

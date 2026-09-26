@@ -78,6 +78,14 @@ export const OrderRepository = {
       .all();
   },
 
+  // "Report a problem": reopens a chat the team closed. Compare-and-swap on the chat still being closed,
+  // so a double click reopens (and reports) only once. Returns null when nothing matched.
+  reopenForProblem: async (id: string, at: Temporal.Instant) => {
+    return await db.orm.public.Order.where({ id })
+      .where((o) => o.chatClosedAt.isNotNull())
+      .update({ chatClosedAt: null, problemReportedAt: at, updatedAt: at });
+  },
+
   // `null` reopens the chat.
   setChatClosed: async (id: string, closedAt: Temporal.Instant | null) => {
     return await db.orm.public.Order.where({ id }).update({ chatClosedAt: closedAt, updatedAt: now() });

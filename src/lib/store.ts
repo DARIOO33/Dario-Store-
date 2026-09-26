@@ -29,6 +29,10 @@ export const SUPPORT_HOURS = { from: 9, to: 23 };
 // Chat messages marked "contains login details" are erased this many days after they were sent.
 export const SENSITIVE_MESSAGE_DAYS = 7;
 
+// After delivery, a customer can reopen a closed chat with "Report a problem" for this many days
+// (at most once a day). After that the closed chat shows the CONTACT channels instead.
+export const PROBLEM_REPORT_DAYS = 30;
+
 export const MAX_QUANTITY_PER_LINE = 20;
 export const LOW_STOCK_THRESHOLD = 5;
 export const PAGE_SIZE = 12;

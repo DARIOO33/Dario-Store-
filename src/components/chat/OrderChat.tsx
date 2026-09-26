@@ -5,6 +5,7 @@ import MessageBubble from "@/src/components/chat/MessageBubble";
 import PaymentBar, { PaymentSentBox } from "@/src/components/chat/PaymentBar";
 import { useOrderChat } from "@/src/components/chat/useOrderChat";
 import ChatReviewCard from "@/src/components/chat/ChatReviewCard";
+import ReportProblem from "@/src/components/chat/ReportProblem";
 import { usePhotoAttachment } from "@/src/components/chat/usePhotoAttachment";
 import { SENSITIVE_MESSAGE_DAYS, STORE_NAME } from "@/src/lib/store";
 import { useT } from "@/src/i18n/client";
@@ -110,7 +111,19 @@ export default function OrderChat({ orderId, asAdmin }: { orderId: string; asAdm
       </div>
 
       {chat.closed ? (
-        <p className="chatClosed">{chat.closure === "cancelled" ? t("chat.closed") : asAdmin ? t("chat.closedByYou") : t("chat.closedByStore")}</p>
+        <>
+          <p className="chatClosed">{chat.closure === "cancelled" ? t("chat.closed") : asAdmin ? t("chat.closedByYou") : t("chat.closedByStore")}</p>
+          {chat.problemReport && (
+            <ReportProblem
+              orderId={orderId}
+              state={chat.problemReport}
+              onReported={() => {
+                stickToBottom.current = true;
+                chat.refresh();
+              }}
+            />
+          )}
+        </>
       ) : (
         <form className="chatForm" onSubmit={handleSubmit}>
           {preview && (

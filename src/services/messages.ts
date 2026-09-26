@@ -5,7 +5,9 @@ import { MessageRepository } from "../prisma/messages";
 import { OrderRepository } from "../prisma/orders";
 import { UserError, userError } from "../lib/result";
 import { now } from "../lib/time";
-import { SENSITIVE_MESSAGE_DAYS } from "../lib/store";
+import { PROBLEM_REPORT_DAYS, SENSITIVE_MESSAGE_DAYS } from "../lib/store";
+import { isProblemReason } from "../lib/problems";
+import { OrderNotifications } from "./order-notifications";
 import { sniffImageType } from "../lib/image-type";
 import { ChatImages } from "./chat-images";
 import { isTeam } from "../lib/roles";
@@ -22,6 +24,13 @@ type Viewer = { id: string; role: string; name?: string } | null;
 // Why nobody can write any more: the order was cancelled, or the team closed the chat
 // (the "Close chat" button). A delivered order's chat stays open until the team closes it.
 export type ChatClosure = "cancelled" | "store" | null;
+
+// Whether the customer can reopen a chat the team closed ("Report a problem"): for PROBLEM_REPORT_DAYS
+// after delivery (no limit while the order is still on its way), at most once every 24 hours.
+export type ProblemReportState =
+  | { kind: "available"; until: string | null }
+  | { kind: "expired"; days: number }
+  | { kind: "wait"; after: string };
 
 // Shown in a delivered order's chat so the customer can review what they bought.
 export type ChatReview = { reviewerName: string; items: ChatReviewItem[] };
@@ -98,6 +107,19 @@ function closureOf(order: { status: string; chatClosedAt: Temporal.Instant | nul
   return order.chatClosedAt ? "store" : null;
 }
 
+const REPORT_EVERY_HOURS = 24;
+
+function problemReportState(order: { deliveredAt: Temporal.Instant | null; problemReportedAt: Temporal.Instant | null }): ProblemReportState {
+  const current = now();
+  const until = order.deliveredAt?.add({ hours: PROBLEM_REPORT_DAYS * 24 }) ?? null;
+  if (until && Temporal.Instant.compare(current, until) > 0) return { kind: "expired", days: PROBLEM_REPORT_DAYS };
+
+  const after = order.problemReportedAt?.add({ hours: REPORT_EVERY_HOURS });
+  if (after && Temporal.Instant.compare(current, after) < 0) return { kind: "wait", after: after.toString() };
+
+  return { kind: "available", until: until?.toString() ?? null };
+}
+
 // Deletes the photo (wherever it's kept), then blanks the message.
 async function wipeMessage(messageId: string) {
   const image = await MessageRepository.findImage(messageId);
@@ -139,7 +161,9 @@ export const MessageService = {
     const closure = closureOf(order);
     const review: ChatReview | null = access.asAdmin ? null : await ReviewService.forOrderChat({ id: viewer!.id, name: viewer!.name ?? "" }, order);
 
-    return { messages: messages.map((message) => toChat(message, access.asAdmin)), closed: closure !== null, closure, payment, review };
+    const problemReport = !access.asAdmin && closure === "store" ? problemReportState(order) : null;
+
+    return { messages: messages.map((message) => toChat(message, access.asAdmin)), closed: closure !== null, closure, payment, review, problemReport };
   },
 
   send: async (orderId: string, viewer: Viewer, asAdmin: boolean, text: string, image?: { bytes: Uint8Array }, sensitive = false) => {
@@ -184,6 +208,33 @@ export const MessageService = {
     await OrderRepository.setChatClosed(orderId, closed ? now() : null);
     const t = createTranslator(toLocale(order.locale));
     await MessageRepository.create({ orderId, fromAdmin: true, body: t(closed ? "chatSystem.chatClosed" : "chatSystem.chatReopened"), hasImage: false });
+  },
+
+  // "Report a problem" on a chat the team closed: reopens it with the customer's message and alerts the admins.
+  reportProblem: async (orderId: string, viewer: Viewer, reason: string, text: string) => {
+    const access = await accessFor(orderId, viewer, false);
+    if (!access) throw userError("errors.writeDenied");
+
+    const { order } = access;
+    const closure = closureOf(order);
+    if (closure === "cancelled") throw userError("errors.chatClosed");
+    if (closure !== "store") throw userError("errors.chatAlreadyOpen");
+    if (!isProblemReason(reason)) throw userError("errors.problemReason");
+
+    const body = text.replace(/\r\n/g, "\n").trim();
+    if (body.length === 0) throw userError("errors.emptyMessage");
+    if (body.length > MAX_LENGTH) throw userError("errors.messageTooLong", { max: MAX_LENGTH });
+
+    const state = problemReportState(order);
+    if (state.kind === "expired") throw userError("errors.problemExpired", { days: state.days });
+    if (state.kind === "wait") throw userError("errors.problemWait");
+
+    if (!(await OrderRepository.reopenForProblem(orderId, now()))) throw userError("errors.chatAlreadyOpen");
+
+    const t = createTranslator(toLocale(order.locale));
+    const label = t.messages.chat.problemReasons[reason];
+    await MessageRepository.create({ orderId, fromAdmin: false, senderUserId: viewer!.id, body: `${t("chatSystem.problemReported", { reason: label })}\n${body}`, hasImage: false });
+    void OrderNotifications.problemReported(order, createTranslator("en").messages.chat.problemReasons[reason]);
   },
 
   // Either side of the chat can erase a "login details" message right away (for example once the top-up is done).

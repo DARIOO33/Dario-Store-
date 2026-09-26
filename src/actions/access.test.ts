@@ -142,6 +142,16 @@ describe("customer actions pass who is calling to the service (which checks it)"
     await expect(orders.placeOrderAction({ items: [{ productId: "p-1", quantity: "5" }] } as never)).resolves.toMatchObject({ ok: false });
   });
 
+  it("reports a problem as the signed-in customer (the service then checks it is their order)", async () => {
+    session.user = member;
+    const spy = vi.fn();
+    const { MessageService } = await import("../services/messages");
+    (MessageService as unknown as { reportProblem: unknown }).reportProblem = spy;
+
+    await messages.reportProblemAction("o-1", "NOT_WORKING", "Account locked");
+    expect(spy).toHaveBeenCalledWith("o-1", member, "NOT_WORKING", "Account locked");
+  });
+
   it("rejects a chat attachment that is not a file", async () => {
     session.user = member;
     const data = new FormData();

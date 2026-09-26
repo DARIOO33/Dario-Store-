@@ -57,6 +57,16 @@ export async function setChatClosedAction(orderId: string, closed: boolean) {
   });
 }
 
+// The customer's "Report a problem" on a chat the store closed (the service checks it is their order).
+export async function reportProblemAction(orderId: string, reason: string, text: string) {
+  const user = await getCurrentUser();
+
+  return await safely(async () => {
+    await MessageService.reportProblem(String(orderId), user, String(reason), String(text ?? ""));
+    revalidatePath("/admin", "layout");
+  });
+}
+
 export async function markPaymentSentAction(orderId: string) {
   const user = await getCurrentUser();
   const locale = await getLocale();

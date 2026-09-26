@@ -260,6 +260,8 @@ model Order {
   // Set when the team closes the order's chat (the "Close chat" button); null while it is open.
   // Only a cancelled order's chat closes by itself.
   chatClosedAt       Timestamptz?
+  // Last time the customer used "Report a problem" on the closed chat (it reopens the chat; once a day at most).
+  problemReportedAt  Timestamptz?
   createdAt          Timestamptz @default(now())
   updatedAt          Timestamptz @default(now())
 

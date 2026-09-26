@@ -335,3 +335,31 @@
   gap: 0.5rem;
   font-size: 0.85rem;
 }
+
+/* Under a closed chat (customer side): "Report a problem", or the contact channels once it is too late. */
+.chatProblem {
+  display: grid;
+  gap: 0.6rem;
+  justify-items: start;
+  padding: 0.8rem 1rem;
+  border: 1.5px dashed var(--ink);
+  border-radius: 4px;
+  background: var(--paper);
+  font-size: 0.9rem;
+}
+
+.chatProblem .field,
+.chatProblem textarea.input {
+  width: 100%;
+}
+
+.chatProblem textarea.input {
+  min-height: 4.5rem;
+}
+
+.chatContact {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding-left: 1.1rem;
+}

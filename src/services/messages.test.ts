@@ -16,9 +16,10 @@ vi.mock("../prisma/messages", () => ({
   },
 }));
 vi.mock("../prisma/orders", () => ({
-  OrderRepository: { findById: vi.fn(), listForUser: vi.fn(), setChatClosed: vi.fn() },
+  OrderRepository: { findById: vi.fn(), listForUser: vi.fn(), setChatClosed: vi.fn(), reopenForProblem: vi.fn() },
 }));
 vi.mock("./reviews", () => ({ ReviewService: { forOrderChat: vi.fn() } }));
+vi.mock("./order-notifications", () => ({ OrderNotifications: { problemReported: vi.fn() } }));
 vi.mock("./chat-images", () => ({
   ChatImages: { save: vi.fn(), load: vi.fn(), remove: vi.fn() },
 }));
@@ -27,12 +28,14 @@ import { MessageRepository } from "../prisma/messages";
 import { OrderRepository } from "../prisma/orders";
 import { ChatImages } from "./chat-images";
 import { ReviewService } from "./reviews";
+import { OrderNotifications } from "./order-notifications";
 import { MessageService } from "./messages";
 
 const messages = vi.mocked(MessageRepository);
 const orders = vi.mocked(OrderRepository);
 const images = vi.mocked(ChatImages);
 const reviewService = vi.mocked(ReviewService);
+const notifications = vi.mocked(OrderNotifications);
 
 const customer = { id: "user-1", role: "CUSTOMER", name: "Sami" };
 const stranger = { id: "user-2", role: "CUSTOMER", name: "Other" };
@@ -56,6 +59,7 @@ function order(changes: Record<string, unknown> = {}) {
     shippedAt: null,
     deliveredAt: null,
     chatClosedAt: null,
+    problemReportedAt: null,
     locale: "en",
     ...changes,
   } as unknown as FakeOrder;
@@ -365,5 +369,102 @@ describe("the review card in the chat", () => {
     orders.findById.mockResolvedValue(order({ status: "DELIVERED", chatClosedAt: at }));
     reviewService.forOrderChat.mockResolvedValue(card);
     await expect(MessageService.open("order-1", customer, false)).resolves.toMatchObject({ closure: "store", review: card });
+  });
+});
+
+describe("'Report a problem' on a chat the store closed", () => {
+  const daysAgo = (days: number) => Temporal.Now.instant().subtract({ hours: days * 24 });
+  const closedDelivered = (changes: Record<string, unknown> = {}) =>
+    order({ status: "DELIVERED", deliveredAt: daysAgo(3), chatClosedAt: daysAgo(1), ...changes });
+
+  beforeEach(() => {
+    orders.reopenForProblem.mockResolvedValue({ id: "order-1" } as never);
+  });
+
+  it("is offered to the customer for 30 days after delivery", async () => {
+    const deliveredAt = daysAgo(3);
+    orders.findById.mockResolvedValue(closedDelivered({ deliveredAt }));
+
+    const { problemReport } = await MessageService.open("order-1", customer, false);
+    expect(problemReport).toEqual({ kind: "available", until: deliveredAt.add({ hours: 30 * 24 }).toString() });
+  });
+
+  it("has no time limit while the order is still on its way", async () => {
+    orders.findById.mockResolvedValue(order({ status: "PAID", chatClosedAt: daysAgo(1) }));
+    await expect(MessageService.open("order-1", customer, false)).resolves.toMatchObject({ problemReport: { kind: "available", until: null } });
+  });
+
+  it("is not offered when the chat is open, or to the team", async () => {
+    orders.findById.mockResolvedValue(order({ status: "DELIVERED", deliveredAt: daysAgo(3) }));
+    await expect(MessageService.open("order-1", customer, false)).resolves.toMatchObject({ problemReport: null });
+
+    orders.findById.mockResolvedValue(closedDelivered());
+    await expect(MessageService.open("order-1", admin, true)).resolves.toMatchObject({ problemReport: null });
+  });
+
+  it("[window] is over 30 days after delivery: the contact channels are shown instead", async () => {
+    orders.findById.mockResolvedValue(closedDelivered({ deliveredAt: daysAgo(31) }));
+
+    await expect(MessageService.open("order-1", customer, false)).resolves.toMatchObject({ problemReport: { kind: "expired", days: 30 } });
+    await expect(MessageService.reportProblem("order-1", customer, "NOT_WORKING", "Account locked")).rejects.toMatchObject({ key: "errors.problemExpired" });
+    expect(orders.reopenForProblem).not.toHaveBeenCalled();
+  });
+
+  it("[limit] can be used once a day", async () => {
+    const reportedAt = Temporal.Now.instant().subtract({ hours: 2 });
+    orders.findById.mockResolvedValue(closedDelivered({ problemReportedAt: reportedAt }));
+
+    await expect(MessageService.open("order-1", customer, false)).resolves.toMatchObject({ problemReport: { kind: "wait", after: reportedAt.add({ hours: 24 }).toString() } });
+    await expect(MessageService.reportProblem("order-1", customer, "NOT_WORKING", "Still broken")).rejects.toMatchObject({ key: "errors.problemWait" });
+
+    orders.findById.mockResolvedValue(closedDelivered({ problemReportedAt: Temporal.Now.instant().subtract({ hours: 25 }) }));
+    await expect(MessageService.reportProblem("order-1", customer, "NOT_WORKING", "Still broken")).resolves.toBeUndefined();
+  });
+
+  it("reopens the chat with the customer's message, labelled in their language, and alerts the admins in English", async () => {
+    const current = closedDelivered({ locale: "fr" });
+    orders.findById.mockResolvedValue(current);
+
+    await MessageService.reportProblem("order-1", customer, "NOT_WORKING", "  Le compte ne marche plus\r\n ");
+
+    expect(orders.reopenForProblem).toHaveBeenCalledWith("order-1", expect.any(Temporal.Instant));
+    expect(messages.create).toHaveBeenCalledWith({ orderId: "order-1", fromAdmin: false, senderUserId: customer.id, body: "Problème signalé : Ça ne fonctionne pas\nLe compte ne marche plus", hasImage: false });
+    expect(notifications.problemReported).toHaveBeenCalledWith(current, "It doesn't work");
+  });
+
+  it("a double click reports only once", async () => {
+    orders.findById.mockResolvedValue(closedDelivered());
+    orders.reopenForProblem.mockResolvedValueOnce({ id: "order-1" } as never).mockResolvedValueOnce(null as never);
+
+    const results = await Promise.allSettled([
+      MessageService.reportProblem("order-1", customer, "MISSING", "Only one key"),
+      MessageService.reportProblem("order-1", customer, "MISSING", "Only one key"),
+    ]);
+
+    expect(results.map((r) => r.status).sort()).toEqual(["fulfilled", "rejected"]);
+    expect(messages.create).toHaveBeenCalledOnce();
+    expect(notifications.problemReported).toHaveBeenCalledOnce();
+  });
+
+  it("is only for the order's owner", async () => {
+    orders.findById.mockResolvedValue(closedDelivered());
+    for (const viewer of [stranger, admin, staff, null]) {
+      await expect(MessageService.reportProblem("order-1", viewer, "OTHER", "hello")).rejects.toMatchObject({ key: "errors.writeDenied" });
+    }
+    expect(orders.reopenForProblem).not.toHaveBeenCalled();
+  });
+
+  it("refuses an open chat, a cancelled order, an unknown reason and an empty or too long message", async () => {
+    orders.findById.mockResolvedValue(order({ status: "DELIVERED", deliveredAt: daysAgo(1) }));
+    await expect(MessageService.reportProblem("order-1", customer, "OTHER", "hi")).rejects.toMatchObject({ key: "errors.chatAlreadyOpen" });
+
+    orders.findById.mockResolvedValue(order({ status: "CANCELLED", chatClosedAt: daysAgo(1) }));
+    await expect(MessageService.reportProblem("order-1", customer, "OTHER", "hi")).rejects.toMatchObject({ key: "errors.chatClosed" });
+
+    orders.findById.mockResolvedValue(closedDelivered());
+    await expect(MessageService.reportProblem("order-1", customer, "REFUND_ME_NOW", "hi")).rejects.toMatchObject({ key: "errors.problemReason" });
+    await expect(MessageService.reportProblem("order-1", customer, "OTHER", "   ")).rejects.toMatchObject({ key: "errors.emptyMessage" });
+    await expect(MessageService.reportProblem("order-1", customer, "OTHER", "x".repeat(1001))).rejects.toMatchObject({ key: "errors.messageTooLong" });
+    expect(orders.reopenForProblem).not.toHaveBeenCalled();
   });
 });
