@@ -6,12 +6,15 @@ import ProductMedia from "@/src/components/catalog/ProductMedia";
 import Pagination from "@/src/components/ui/Pagination";
 import Price from "@/src/components/ui/Price";
 import { buildQuery } from "@/src/lib/query";
+import { requirePageRole } from "@/src/lib/guards";
 
 export const metadata: Metadata = { title: "Products" };
 
 const PAGE_SIZE = 15;
 
 export default async function AdminProductsPage({ searchParams }: { searchParams: Promise<{ q?: string; page?: string }> }) {
+  // Checked here too, not only in the admin layout: a layout is skipped when the browser asks for just this page.
+  await requirePageRole("ADMIN");
   const sp = await searchParams;
   const q = sp.q?.trim() || undefined;
   const page = Math.max(1, Number(sp.page) || 1);

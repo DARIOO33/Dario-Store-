@@ -10,12 +10,16 @@ import { buildQuery } from "@/src/lib/query";
 import { formatMillimes } from "@/src/lib/money";
 import { formatDateTime } from "@/src/lib/time";
 import { getT } from "@/src/i18n/server";
+import { requirePageRole } from "@/src/lib/guards";
+import { TEAM } from "@/src/lib/roles";
 
 export const metadata: Metadata = { title: "Orders" };
 
 const PAGE_SIZE = 15;
 
 export default async function AdminOrdersPage({ searchParams }: { searchParams: Promise<{ status?: string; page?: string }> }) {
+  // Checked here too, not only in the admin layout: a layout is skipped when the browser asks for just this page.
+  await requirePageRole(...TEAM);
   const sp = await searchParams;
   const t = await getT();
   const status = ORDER_STATUSES.find((s) => s === sp.status);

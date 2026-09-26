@@ -6,10 +6,14 @@ import ShipmentForm from "@/src/components/admin/ShipmentForm";
 import ShipmentTracking from "@/src/components/admin/ShipmentTracking";
 import ShipmentStatusBadge from "@/src/components/tracking/ShipmentStatusBadge";
 import { formatDateTime } from "@/src/lib/time";
+import { requirePageRole } from "@/src/lib/guards";
+import { TEAM } from "@/src/lib/roles";
 
 export const metadata: Metadata = { title: "Shipment" };
 
 export default async function AdminShipmentPage({ params }: { params: Promise<{ id: string }> }) {
+  // Checked here too, not only in the admin layout: a layout is skipped when the browser asks for just this page.
+  await requirePageRole(...TEAM);
   const { id } = await params;
   const shipment = await ShipmentService.getForAdmin(id);
 

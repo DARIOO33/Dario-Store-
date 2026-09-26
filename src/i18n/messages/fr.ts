@@ -401,6 +401,8 @@ export const fr: Messages = {
     photoChoose: "Veuillez choisir une photo ou une capture d'écran.",
     tooFast: "Vous envoyez des messages trop vite — patientez un instant.",
     notAFile: "Cette pièce jointe n'est pas un fichier.",
+    orderChanged: "Cette commande vient de changer — veuillez recharger la page.",
+    detailTooLong: "Veuillez raccourcir vos informations : {field} ne peut pas dépasser {max} caractères.",
   },
   email: {
     hello: "Bonjour {name},",

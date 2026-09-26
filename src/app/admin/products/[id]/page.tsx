@@ -6,10 +6,13 @@ import { ProductService } from "@/src/services/products";
 import ProductForm from "@/src/components/admin/ProductForm";
 import { cloudinaryConfigured } from "@/src/lib/cloudinary";
 import { millimesToInput } from "@/src/lib/money";
+import { requirePageRole } from "@/src/lib/guards";
 
 export const metadata: Metadata = { title: "Edit product" };
 
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+  // Checked here too, not only in the admin layout: a layout is skipped when the browser asks for just this page.
+  await requirePageRole("ADMIN");
   const { id } = await params;
   const [product, categories] = await Promise.all([ProductService.getForAdmin(id), CategoryService.list()]);
 

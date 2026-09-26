@@ -63,6 +63,14 @@ export const OrderRepository = {
     return await db.orm.public.Order.where({ id }).update({ paymentStatus, ...(paymentSentAt !== undefined && { paymentSentAt }), updatedAt: now() });
   },
 
+  // Compare-and-swap for the payment buttons: only changes a PENDING order whose payment is still one
+  // of `from`, so a double click can't do it twice. Returns null when nothing matched.
+  changePaymentStatus: async (id: string, from: PaymentStatus[], to: PaymentStatus, paymentSentAt?: Temporal.Instant) => {
+    return await db.orm.public.Order.where({ id, status: "PENDING" })
+      .where((o) => o.paymentStatus.in(from))
+      .update({ paymentStatus: to, ...(paymentSentAt && { paymentSentAt }), updatedAt: now() });
+  },
+
   // Orders whose customer says they've paid and are waiting for the store to check.
   findAwaitingVerification: async () => {
     return await db.orm.public.Order.where({ status: "PENDING", paymentStatus: "SUBMITTED" })

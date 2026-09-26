@@ -14,6 +14,7 @@ import { AvailabilityService } from "@/src/services/availability";
 import { availabilityText } from "@/src/lib/availability";
 import { formatDateTime } from "@/src/lib/time";
 import { getT, pageTitle } from "@/src/i18n/server";
+import { isTeam } from "@/src/lib/roles";
 
 export const dynamic = "force-dynamic";
 export const generateMetadata = pageTitle("order.title");
@@ -31,12 +32,12 @@ export default async function OrderPage({ params, searchParams }: Props) {
 
   if (!order) notFound();
 
-  const isGuestView = !viewer || (viewer.id !== order.userId && viewer.role !== "ADMIN");
+  const isGuestView = !viewer || (viewer.id !== order.userId && !isTeam(viewer.role));
   const steps: OrderStatus[] = allowedStatuses(order.requiresShipping).filter((status) => status !== "CANCELLED");
   const currentStep = steps.indexOf(order.status);
   const cancelled = order.status === "CANCELLED";
   const isOwner = !!viewer && viewer.id === order.userId;
-  const isAdmin = viewer?.role === "ADMIN";
+  const isAdmin = isTeam(viewer?.role);
   const canChat = isOwner || (isAdmin && !!order.userId);
   const [reviewLinks, availability] = await Promise.all([ReviewService.reviewLinksForOrder(viewer, order), AvailabilityService.current()]);
   // Only while the order still waits for the shop (payment to check, or delivery to make).
@@ -121,7 +122,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
           </section>
 
           {order.status === "PENDING" && <CancelOrderButton orderId={order.id} token={sp.t ?? null} />}
-          {viewer?.role === "ADMIN" && (
+          {isAdmin && (
             <Link href={`/admin/orders/${order.id}`} className="btn btnAccent">
               {t("order.manage")}
             </Link>

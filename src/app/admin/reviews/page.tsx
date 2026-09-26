@@ -6,12 +6,15 @@ import Pagination from "@/src/components/ui/Pagination";
 import Stars from "@/src/components/reviews/Stars";
 import { buildQuery } from "@/src/lib/query";
 import { getT } from "@/src/i18n/server";
+import { requirePageRole } from "@/src/lib/guards";
 
 export const metadata: Metadata = { title: "Reviews" };
 
 const PAGE_SIZE = 12;
 
 export default async function AdminReviewsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  // Checked here too, not only in the admin layout: a layout is skipped when the browser asks for just this page.
+  await requirePageRole("ADMIN");
   const sp = await searchParams;
   const t = await getT();
   const page = Math.max(1, Number(sp.page) || 1);

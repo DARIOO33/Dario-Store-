@@ -15,7 +15,8 @@ export function rememberAfterLogin(path: string) {
 export function readAfterLogin() {
   try {
     const path = sessionStorage.getItem(KEY);
-    return path && /^\/(?!\/)/.test(path) ? path : "/";
+    // "/x" only: not "//site" and not "/\site", which browsers also read as another site.
+    return path && /^\/(?![/\\])/.test(path) ? path : "/";
   } catch {
     return "/";
   }

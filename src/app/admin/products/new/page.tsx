@@ -3,10 +3,13 @@ import Link from "next/link";
 import { CategoryService } from "@/src/services/categories";
 import ProductForm from "@/src/components/admin/ProductForm";
 import { cloudinaryConfigured } from "@/src/lib/cloudinary";
+import { requirePageRole } from "@/src/lib/guards";
 
 export const metadata: Metadata = { title: "New product" };
 
 export default async function NewProductPage() {
+  // Checked here too, not only in the admin layout: a layout is skipped when the browser asks for just this page.
+  await requirePageRole("ADMIN");
   const categories = await CategoryService.list();
 
   return (

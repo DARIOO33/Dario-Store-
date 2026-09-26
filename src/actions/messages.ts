@@ -5,6 +5,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentUser, requireRole } from "../lib/session";
+import { TEAM } from "../lib/roles";
 import { safely, userError } from "../lib/result";
 import { getLocale } from "../i18n/server";
 import { MessageService } from "../services/messages";
@@ -57,7 +58,7 @@ export async function markPaymentSentAction(orderId: string) {
 }
 
 export async function requestNewProofAction(orderId: string) {
-  await requireRole("ADMIN");
+  await requireRole(...TEAM);
 
   return await safely(async () => {
     await OrderService.requestNewProof(String(orderId));

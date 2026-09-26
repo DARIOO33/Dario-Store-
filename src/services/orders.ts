@@ -14,6 +14,7 @@ import { cartKey } from "../lib/cart-key";
 import { MAX_QUANTITY_PER_LINE, shippingFee } from "../lib/store";
 import { AVAILABLE_CRYPTO_NETWORKS, AVAILABLE_ONLINE_METHODS, type PaymentMethod } from "../lib/payments";
 import { localized } from "../i18n/content";
+import { isTeam } from "../lib/roles";
 import { createTranslator } from "../i18n/translate";
 import { toLocale, type Locale } from "../i18n/config";
 
@@ -49,6 +50,19 @@ type OrderLine = {
 };
 
 const MAX_ORDERS_PER_HOUR = 5;
+// Same as the cart page: more distinct lines than this isn't a real cart.
+const MAX_LINES = 50;
+
+// The checkout fields are shown to the admin and repeated in emails the shop sends, so a
+// script must not be able to fill them with pages of text. `label` is the form's own label.
+const FIELD_LIMITS = [
+  { field: "name", label: "checkout.fullName", max: 80 },
+  { field: "email", label: "checkout.email", max: 254 },
+  { field: "address", label: "checkout.street", max: 160 },
+  { field: "city", label: "checkout.city", max: 60 },
+  { field: "postalCode", label: "checkout.postalCode", max: 12 },
+  { field: "notes", label: "checkout.note", max: 500 },
+] as const;
 
 // Virtual-only orders are never "shipped".
 export function allowedStatuses(requiresShipping: boolean): OrderStatus[] {
@@ -70,6 +84,11 @@ function stockOf(line: Pick<OrderLine, "product" | "variant">) {
 }
 
 function validateContact(input: CheckoutInput) {
+  const t = createTranslator(input.locale);
+  for (const { field, label, max } of FIELD_LIMITS) {
+    if (input[field].trim().length > max) throw userError("errors.detailTooLong", { field: t(label), max });
+  }
+
   const name = input.name.trim();
   const email = input.email.trim().toLowerCase();
   const phone = input.phone.trim();
@@ -81,12 +100,14 @@ function validateContact(input: CheckoutInput) {
   return { name, email, phone };
 }
 
-// Merges duplicate lines and sanity-checks the quantities.
+// Merges duplicate lines and sanity-checks the quantities. The limit applies after merging,
+// otherwise sending the same product as ten lines of 20 would order 200.
 function mergeItems(items: CheckoutInput["items"]) {
+  if (items.length > MAX_LINES) throw userError("errors.cartInvalid");
   const wanted = new Map<string, { productId: string; variantId: string | null; quantity: number }>();
 
   for (const item of items) {
-    if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > MAX_QUANTITY_PER_LINE) {
+    if (!Number.isInteger(item.quantity) || item.quantity < 1) {
       throw userError("errors.quantity", { max: MAX_QUANTITY_PER_LINE });
     }
 
@@ -94,6 +115,7 @@ function mergeItems(items: CheckoutInput["items"]) {
     const key = cartKey(item.productId, variantId);
     const line = wanted.get(key) ?? { productId: item.productId, variantId, quantity: 0 };
     line.quantity += item.quantity;
+    if (line.quantity > MAX_QUANTITY_PER_LINE) throw userError("errors.quantity", { max: MAX_QUANTITY_PER_LINE });
     wanted.set(key, line);
   }
 
@@ -298,17 +320,16 @@ export const OrderService = {
     return { orderId: order.id, guestToken };
   },
 
-  // Owners see their own orders, admins see everything, and a guest needs the
+  // Owners see their own orders, the team sees everything, and a guest needs the
   // secret token from the link they were given at checkout.
   getForViewer: async (id: string, viewer: Viewer, token: string | null) => {
     const order = await OrderRepository.findById(id);
     if (!order) return null;
 
-    const isAdmin = viewer?.role === "ADMIN";
     const isOwner = !!viewer && order.userId === viewer.id;
     const hasToken = !!order.guestToken && !!token && sameToken(order.guestToken, token);
 
-    return isAdmin || isOwner || hasToken ? order : null;
+    return isTeam(viewer?.role) || isOwner || hasToken ? order : null;
   },
 
   listForUser: async (userId: string) => {
@@ -341,9 +362,13 @@ export const OrderService = {
     }
 
     await db.transaction(async (tx) => {
-      if (status === "CANCELLED") await restock(tx, order.items);
+      // Compare-and-swap on the status we read: if the admin marks the order Paid while the
+      // customer cancels it (or a cancel is double-clicked), only the first change wins and
+      // the stock is only put back once.
+      const changed = await tx.orm.public.Order.where({ id, status: order.status }).update({ status, updatedAt: now(), ...stageDates(order, status), ...paymentFor(order, status) });
+      if (!changed) throw userError("errors.orderChanged");
 
-      await tx.orm.public.Order.where({ id }).update({ status, updatedAt: now(), ...stageDates(order, status), ...paymentFor(order, status) });
+      if (status === "CANCELLED") await restock(tx, order.items);
     });
 
     // Only the first time the payment is confirmed.
@@ -391,7 +416,8 @@ export const OrderService = {
       throw userError("errors.proofFirst");
     }
 
-    await OrderRepository.setPaymentStatus(id, "SUBMITTED", now());
+    // Two clicks at the same moment both pass the checks above; only the first one changes the payment.
+    if (!(await OrderRepository.changePaymentStatus(id, ["PENDING", "FAILED"], "SUBMITTED", now()))) throw userError("errors.alreadyPaid");
     await MessageRepository.create({ orderId: id, fromAdmin: false, senderUserId: viewer.id, body: createTranslator(locale)("chatSystem.paymentSent"), hasImage: false });
     void OrderNotifications.paymentSent(order);
   },
@@ -403,7 +429,7 @@ export const OrderService = {
     if (!order) throw new UserError("That order no longer exists.");
     if (order.status !== "PENDING" || order.paymentStatus !== "SUBMITTED") throw new UserError("There's no payment waiting to be checked.");
 
-    await OrderRepository.setPaymentStatus(id, "FAILED");
+    if (!(await OrderRepository.changePaymentStatus(id, ["SUBMITTED"], "FAILED"))) throw new UserError("There's no payment waiting to be checked.");
     await MessageRepository.create({
       orderId: id,
       fromAdmin: true,

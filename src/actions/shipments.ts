@@ -1,10 +1,11 @@
 "use server";
 
-// Server actions for AliExpress shipments (admin only): check who is calling,
+// Server actions for AliExpress shipments (the team: admin and staff): check who is calling,
 // hand the input to the service, and refresh the pages that show the result.
 
 import { revalidatePath } from "next/cache";
 import { requireRole } from "../lib/session";
+import { TEAM } from "../lib/roles";
 import { safely } from "../lib/result";
 import { ShipmentService, type ShipmentFormInput } from "../services/shipments";
 
@@ -14,7 +15,7 @@ function refresh(id?: string) {
 }
 
 export async function createShipmentAction(input: ShipmentFormInput) {
-  await requireRole("ADMIN");
+  await requireRole(...TEAM);
 
   return await safely(async () => {
     const created = await ShipmentService.create(input);
@@ -24,7 +25,7 @@ export async function createShipmentAction(input: ShipmentFormInput) {
 }
 
 export async function updateShipmentAction(id: string, input: ShipmentFormInput) {
-  await requireRole("ADMIN");
+  await requireRole(...TEAM);
 
   return await safely(async () => {
     await ShipmentService.update(String(id), input);
@@ -34,7 +35,7 @@ export async function updateShipmentAction(id: string, input: ShipmentFormInput)
 }
 
 export async function addShipmentUpdateAction(id: string, status: string, note: string) {
-  await requireRole("ADMIN");
+  await requireRole(...TEAM);
 
   return await safely(async () => {
     await ShipmentService.addUpdate(String(id), String(status), String(note ?? ""));
@@ -44,7 +45,7 @@ export async function addShipmentUpdateAction(id: string, status: string, note: 
 }
 
 export async function removeShipmentEventAction(shipmentId: string, eventId: string) {
-  await requireRole("ADMIN");
+  await requireRole(...TEAM);
 
   return await safely(async () => {
     await ShipmentService.removeEvent(String(shipmentId), String(eventId));
@@ -54,7 +55,7 @@ export async function removeShipmentEventAction(shipmentId: string, eventId: str
 }
 
 export async function deleteShipmentAction(id: string) {
-  await requireRole("ADMIN");
+  await requireRole(...TEAM);
 
   return await safely(async () => {
     await ShipmentService.remove(String(id));

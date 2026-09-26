@@ -184,7 +184,9 @@ export const CatalogService = {
     const lines: CartLineData[] = [];
 
     for (const { productId, variantId } of wanted.slice(0, 50)) {
-      const product = rows.find((row) => row.id === productId);
+      // A product the admin switched off is treated like a deleted one: its name and price are not
+      // sent to someone who only knows its id. The cart shows the line as removed.
+      const product = rows.find((row) => row.id === productId && row.active);
       if (!product) continue;
 
       const variant = variantId ? product.variants.find((v) => v.id === variantId) : undefined;
@@ -205,7 +207,7 @@ export const CatalogService = {
         type: product.type,
         imageUrl: variant?.imageUrl ?? product.images[0]?.url ?? null,
         stock,
-        available: product.active && valid && (stock === null || stock > 0),
+        available: valid && (stock === null || stock > 0),
       });
     }
 

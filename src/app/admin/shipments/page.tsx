@@ -7,12 +7,16 @@ import Pagination from "@/src/components/ui/Pagination";
 import { buildQuery } from "@/src/lib/query";
 import { formatDate } from "@/src/lib/time";
 import { getT } from "@/src/i18n/server";
+import { requirePageRole } from "@/src/lib/guards";
+import { TEAM } from "@/src/lib/roles";
 
 export const metadata: Metadata = { title: "Shipments" };
 
 const PAGE_SIZE = 15;
 
 export default async function AdminShipmentsPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; page?: string }> }) {
+  // Checked here too, not only in the admin layout: a layout is skipped when the browser asks for just this page.
+  await requirePageRole(...TEAM);
   const sp = await searchParams;
   const t = await getT();
   const q = sp.q?.trim() || undefined;

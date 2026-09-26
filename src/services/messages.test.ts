@@ -34,6 +34,7 @@ const images = vi.mocked(ChatImages);
 const customer = { id: "user-1", role: "CUSTOMER", name: "Sami" };
 const stranger = { id: "user-2", role: "CUSTOMER", name: "Other" };
 const admin = { id: "admin-1", role: "ADMIN", name: "Dario" };
+const staff = { id: "staff-1", role: "STAFF", name: "Yasmine" };
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
 const at = Temporal.Instant.from("2026-09-20T10:00:00Z");
@@ -87,8 +88,15 @@ describe("who can use a chat", () => {
     await expect(MessageService.open("order-1", customer, false)).resolves.toBeDefined();
   });
 
-  it("lets an admin open it as the store", async () => {
+  it("lets an admin or a staff member open it as the store", async () => {
     await expect(MessageService.open("order-1", admin, true)).resolves.toBeDefined();
+    await expect(MessageService.open("order-1", staff, true)).resolves.toBeDefined();
+  });
+
+  it("signs a staff member's message with their name for the team", async () => {
+    const { message: sent } = await MessageService.send("order-1", staff, true, "Your code is on its way");
+    expect(messages.create).toHaveBeenCalledWith(expect.objectContaining({ fromAdmin: true, senderUserId: "staff-1" }));
+    expect(sent.senderName).toBe("Yasmine");
   });
 
   it("refuses guests, other customers and customers pretending to be the store", async () => {
@@ -243,9 +251,10 @@ describe("getting a chat photo", () => {
     images.load.mockResolvedValue(Buffer.from(PNG));
   });
 
-  it("gives the photo to the owner and to admins", async () => {
+  it("gives the photo to the owner and to the team", async () => {
     await expect(MessageService.getImage("msg-1", customer)).resolves.toEqual({ mimeType: "image/png", bytes: Buffer.from(PNG) });
     await expect(MessageService.getImage("msg-1", admin)).resolves.not.toBeNull();
+    await expect(MessageService.getImage("msg-1", staff)).resolves.not.toBeNull();
   });
 
   it("gives nothing to guests or other customers", async () => {

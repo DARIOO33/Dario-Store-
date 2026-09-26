@@ -8,6 +8,7 @@ import { now } from "../lib/time";
 import { SENSITIVE_MESSAGE_DAYS } from "../lib/store";
 import { sniffImageType } from "../lib/image-type";
 import { ChatImages } from "./chat-images";
+import { isTeam } from "../lib/roles";
 
 const MAX_LENGTH = 1000;
 const MAX_PER_MINUTE = 8;
@@ -40,7 +41,7 @@ export type ChatPayment = {
 };
 
 // The chat is private to the order: its owner (a signed-in customer) and
-// admins. The caller says which side they're speaking as, and we check they
+// the shop's team (admin and staff). The caller says which side they're speaking as, and we check they
 // really are that side. Guests and everyone else get nothing.
 async function accessFor(orderId: string, viewer: Viewer, asAdmin: boolean) {
   if (!viewer) return null;
@@ -48,7 +49,7 @@ async function accessFor(orderId: string, viewer: Viewer, asAdmin: boolean) {
   const order = await OrderRepository.findById(orderId);
   if (!order) return null;
 
-  const allowed = asAdmin ? viewer.role === "ADMIN" : order.userId === viewer.id;
+  const allowed = asAdmin ? isTeam(viewer.role) : order.userId === viewer.id;
 
   return allowed ? { order, asAdmin } : null;
 }
@@ -162,7 +163,7 @@ export const MessageService = {
     await wipeMessage(messageId);
   },
 
-  // Only the order's owner or an admin can see a photo.
+  // Only the order's owner or the team can see a photo.
   getImage: async (messageId: string, viewer: Viewer) => {
     if (!viewer) return null;
 
@@ -170,7 +171,7 @@ export const MessageService = {
     if (!message?.hasImage) return null;
 
     const order = await OrderRepository.findById(message.orderId);
-    if (!order || (viewer.role !== "ADMIN" && order.userId !== viewer.id)) return null;
+    if (!order || (!isTeam(viewer.role) && order.userId !== viewer.id)) return null;
 
     const image = await MessageRepository.findImage(messageId);
     const bytes = image ? await ChatImages.load(image) : null;

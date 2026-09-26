@@ -46,6 +46,11 @@ npm run seed:store     # demo catalogue
   browser — services recompute them.
 - User-fixable errors: `throw new UserError("…")` in services, wrap actions with `safely()`.
 - Auth: `requireRole()` in server actions (throws), `requirePageRole()` in pages/layouts (redirects).
+  **Every admin page calls `await requirePageRole("ADMIN")` itself**: the layout check alone can be skipped with a
+  hand-made request (Next renders only the page on client navigation). `src/test/access-rules.test.ts` enforces it.
+- Roles (`lib/roles.ts`): ADMIN runs everything; STAFF (`TEAM` / `isTeam()`) gets only orders, the chat, payment checks,
+  delivery emails and shipments. Products, categories, reviews, refunds, availability and the dashboard's sales
+  figures stay `"ADMIN"`. Giving staff a new page or action is a deliberate choice: update `access-rules.test.ts`.
 - **Client components must not import `services/` or `prisma/` at runtime** (only `import type`) — it pulls the
   database into the browser bundle and breaks the build. Shared pure helpers go in `src/lib/`.
 - Import style: `@/src/...` alias in `app/` and `components/`; relative imports in `services/`, `prisma/`,
@@ -114,7 +119,7 @@ npm run seed:store     # demo catalogue
 - Unit tests (Vitest, `*.test.ts(x)` next to the code, config in `vitest.config.mts`) never touch the database:
   service tests `vi.mock` the repositories (see `services/messages.test.ts`); component tests start with
   `// @vitest-environment jsdom` and render through `renderWithLocale` (`src/test/render.tsx`).
-  So far only the chat is covered.
+  Services, access control, helpers and the chat are covered; `[fixed]` tests guard past abuses.
 - For UI/flow checks drive the real app with Playwright against **`npm run build && npm start` on port 3000**,
   not `next dev` (dev compiles lazily and multi-page scripts get flaky). Stop your server afterwards and never
   delete `.next/dev/lock` — the owner runs their own dev server.

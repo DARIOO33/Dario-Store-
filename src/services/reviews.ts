@@ -10,6 +10,7 @@ import { DEFAULT_LOCALE, type Locale } from "../i18n/config";
 
 const MAX_MESSAGE = 1000;
 const MAX_REPLY = 600;
+const MAX_AUTHOR_NAME = 60;
 export const REVIEWS_PER_PAGE = 8;
 
 // A review needs a purchase that has actually been paid: not pending, not cancelled.
@@ -135,8 +136,10 @@ export const ReviewService = {
 
     if (!(await ProductRepository.findById(productId))) throw userError("reviews.errors.productGone");
 
-    // The name is masked here, before saving, so a hidden name is never stored.
-    const data = { rating: input.rating, message, hideName: input.hideName, authorName: input.hideName ? maskName(viewer.name) : viewer.name.trim() };
+    // The name is masked here, before saving, so a hidden name is never stored. Account names have
+    // no length limit at sign-up, so it is cut to what a review card can show.
+    const name = viewer.name.trim().slice(0, MAX_AUTHOR_NAME);
+    const data = { rating: input.rating, message, hideName: input.hideName, authorName: input.hideName ? maskName(name) : name };
 
     const existing = await ReviewRepository.findByUserAndProduct(viewer.id, productId);
     if (existing) {

@@ -403,6 +403,8 @@ export const en = {
     photoChoose: "Please choose a photo or screenshot.",
     tooFast: "You're sending messages too fast — wait a moment.",
     notAFile: "That attachment isn't a file.",
+    orderChanged: "This order just changed — please reload the page.",
+    detailTooLong: "Please shorten your details: {field} can be at most {max} characters.",
   },
   email: {
     hello: "Hi {name},",

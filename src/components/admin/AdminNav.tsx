@@ -4,17 +4,19 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/src/lib/auth-client";
 import { STORE_NAME } from "@/src/lib/store";
+import type { UserRole } from "@/src/lib/roles";
 
+// `staff`: also shown to STAFF accounts (see lib/roles.ts).
 const ITEMS = [
   { href: "/admin", label: "Dashboard", exact: true },
   { href: "/admin/products", label: "Products" },
   { href: "/admin/categories", label: "Categories" },
-  { href: "/admin/orders", label: "Orders" },
+  { href: "/admin/orders", label: "Orders", staff: true },
   { href: "/admin/reviews", label: "Reviews" },
-  { href: "/admin/shipments", label: "Shipments" },
+  { href: "/admin/shipments", label: "Shipments", staff: true },
 ];
 
-export default function AdminNav({ name }: { name: string }) {
+export default function AdminNav({ name, role }: { name: string; role: UserRole }) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -26,7 +28,7 @@ export default function AdminNav({ name }: { name: string }) {
 
   return (
     <aside className="adminSide">
-      <Link href="/admin" className="adminBrand">
+      <Link href={role === "ADMIN" ? "/admin" : "/admin/orders"} className="adminBrand">
         <span className="brandStar" aria-hidden="true">✱</span>
         <span>
           {STORE_NAME}
@@ -35,7 +37,7 @@ export default function AdminNav({ name }: { name: string }) {
       </Link>
 
       <nav className="adminNav" aria-label="Admin">
-        {ITEMS.map((item, index) => {
+        {ITEMS.filter((item) => role === "ADMIN" || item.staff).map((item, index) => {
           const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
           return (
             <Link key={item.href} href={item.href} className={active ? "active" : ""} aria-current={active ? "page" : undefined}>

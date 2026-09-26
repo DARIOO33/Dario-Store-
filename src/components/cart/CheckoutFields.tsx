@@ -69,11 +69,11 @@ export default function CheckoutFields({ form, onChange, onSubmit, error, signed
       <div className="grid2">
         <div className="field">
           <label htmlFor="co-name">{t("checkout.fullName")}</label>
-          <input id="co-name" className="input" autoComplete="name" value={form.name} onChange={onChange("name")} required />
+          <input id="co-name" className="input" autoComplete="name" value={form.name} onChange={onChange("name")} maxLength={80} required />
         </div>
         <div className="field">
           <label htmlFor="co-email">{t("checkout.email")}</label>
-          <input id="co-email" className="input" type="email" autoComplete="email" value={form.email} onChange={onChange("email")} required />
+          <input id="co-email" className="input" type="email" autoComplete="email" value={form.email} onChange={onChange("email")} maxLength={254} required />
         </div>
       </div>
 
@@ -87,12 +87,12 @@ export default function CheckoutFields({ form, onChange, onSubmit, error, signed
           <legend>{t("checkout.deliveryAddress")}</legend>
           <div className="field">
             <label htmlFor="co-address">{t("checkout.street")}</label>
-            <input id="co-address" className="input" autoComplete="street-address" placeholder={t("checkout.streetPlaceholder")} value={form.address} onChange={onChange("address")} required />
+            <input id="co-address" className="input" autoComplete="street-address" placeholder={t("checkout.streetPlaceholder")} value={form.address} onChange={onChange("address")} maxLength={160} required />
           </div>
           <div className="grid2">
             <div className="field">
               <label htmlFor="co-city">{t("checkout.city")}</label>
-              <input id="co-city" className="input" list="governorates" autoComplete="address-level2" value={form.city} onChange={onChange("city")} required />
+              <input id="co-city" className="input" list="governorates" autoComplete="address-level2" value={form.city} onChange={onChange("city")} maxLength={60} required />
               <datalist id="governorates">
                 {GOVERNORATES.map((g) => (
                   <option key={g} value={g} />
@@ -101,7 +101,7 @@ export default function CheckoutFields({ form, onChange, onSubmit, error, signed
             </div>
             <div className="field">
               <label htmlFor="co-postal">{t("checkout.postalCode")} <span className="muted">{t("checkout.optional")}</span></label>
-              <input id="co-postal" className="input" autoComplete="postal-code" value={form.postalCode} onChange={onChange("postalCode")} />
+              <input id="co-postal" className="input" autoComplete="postal-code" value={form.postalCode} onChange={onChange("postalCode")} maxLength={12} />
             </div>
           </div>
         </fieldset>

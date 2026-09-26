@@ -10,8 +10,15 @@ import { paymentLabel } from "@/src/lib/payments";
 import { getT } from "@/src/i18n/server";
 import { AvailabilityService } from "@/src/services/availability";
 import AvailabilityPanel from "@/src/components/admin/AvailabilityPanel";
+import { redirect } from "next/navigation";
+import { requirePageRole } from "@/src/lib/guards";
+import { TEAM } from "@/src/lib/roles";
 
 export default async function AdminDashboard() {
+  // Checked here too, not only in the admin layout: a layout is skipped when the browser asks for just this page.
+  const viewer = await requirePageRole(...TEAM);
+  // The dashboard shows the sales figures and the availability switch: ADMIN only. Staff start at the orders.
+  if (viewer.role !== "ADMIN") redirect("/admin/orders");
   const t = await getT();
   const [stats, unread, toVerify, availability] = await Promise.all([
     StatsService.overview(),

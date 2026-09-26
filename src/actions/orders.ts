@@ -5,6 +5,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentUser, requireRole } from "../lib/session";
+import { TEAM } from "../lib/roles";
 import { safely, UserError, userError } from "../lib/result";
 import { getLocale } from "../i18n/server";
 import { OrderService } from "../services/orders";
@@ -74,7 +75,7 @@ export async function cancelMyOrderAction(orderId: string, token: string | null)
 
 // The admin's "send delivery email" panel.
 export async function sendDeliveryEmailAction(orderId: string, message: string, markDelivered: boolean) {
-  await requireRole("ADMIN");
+  await requireRole(...TEAM);
 
   return await safely(async () => {
     await OrderService.deliverByEmail(String(orderId), { message: String(message ?? ""), markDelivered: markDelivered === true });
@@ -84,7 +85,7 @@ export async function sendDeliveryEmailAction(orderId: string, message: string, 
 }
 
 export async function previewDeliveryEmailAction(orderId: string, message: string) {
-  await requireRole("ADMIN");
+  await requireRole(...TEAM);
 
   return await safely(async () => ({ html: await OrderService.previewDeliveryEmail(String(orderId), String(message ?? "")) }));
 }
@@ -100,7 +101,7 @@ export async function markRefundedAction(orderId: string) {
 }
 
 export async function setOrderStatusAction(orderId: string, status: OrderStatus) {
-  await requireRole("ADMIN");
+  await requireRole(...TEAM);
 
   return await safely(async () => {
     if (!ORDER_STATUSES.includes(status)) throw new UserError("Unknown status.");

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { authClient } from "@/src/lib/auth-client";
 import { STORE_NAME } from "@/src/lib/store";
-import type { UserRole } from "@/src/lib/roles";
+import { isTeam, type UserRole } from "@/src/lib/roles";
 import { useCart } from "@/src/components/cart/CartProvider";
 import LanguageSwitcher from "@/src/components/layout/LanguageSwitcher";
 import { useT } from "@/src/i18n/client";
@@ -100,7 +100,7 @@ export default function Header({ categories }: { categories: NavCategory[] }) {
                     <span>{session.user.email}</span>
                     <span className={`badge badge${role}`}>{role && t.messages.roles[role]}</span>
                   </div>
-                  {role === "ADMIN" && (
+                  {isTeam(role) && (
                     <Link href="/admin" className="menuItem" role="menuitem" onClick={() => setMenuOpen(false)}>
                       {t("nav.adminDashboard")}
                     </Link>

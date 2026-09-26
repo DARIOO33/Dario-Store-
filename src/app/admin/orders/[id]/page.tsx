@@ -12,10 +12,14 @@ import { emailConfigured } from "@/src/lib/email";
 import StatusBadge, { statusLabel } from "@/src/components/orders/StatusBadge";
 import { formatDateTime } from "@/src/lib/time";
 import { getT } from "@/src/i18n/server";
+import { requirePageRole } from "@/src/lib/guards";
+import { TEAM } from "@/src/lib/roles";
 
 export const metadata: Metadata = { title: "Order" };
 
 export default async function AdminOrderPage({ params }: { params: Promise<{ id: string }> }) {
+  // Checked here too, not only in the admin layout: a layout is skipped when the browser asks for just this page.
+  const viewer = await requirePageRole(...TEAM);
   const { id } = await params;
   const t = await getT();
   const order = await OrderRepository.findById(id);
@@ -54,7 +58,8 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
             cryptoNetwork={order.cryptoNetwork}
             status={order.status}
             paymentStatus={order.paymentStatus}
-            orderId={order.id}
+            // Refunds are money matters: ADMIN only (the button needs the order id).
+            orderId={viewer.role === "ADMIN" ? order.id : undefined}
             totalMillimes={order.totalMillimes}
             showInstructions={false}
           />

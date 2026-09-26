@@ -1,0 +1,473 @@
+======================================================================
+ Dario Store: whole-app check, detailed log
+ Date:     2026-09-26 01:02:21 CET
+ Branch:   main @ 31f023a (changes not committed yet)
+ Node:     v24.20.0   Vitest: vitest/5.0.2
+======================================================================
+
+SUMMARY
+  Tests:   198 unit tests in 17 files (backend services, access control, helpers, chat UI)
+  Abuses:  6 found and fixed (1 critical, 2 medium, 3 low); #7 is a note about my own test run
+  Open:    4 points left for the owner to decide (see the end of this log)
+  Checks:  tests, typecheck, lint and production build all pass (parts 4 to 7)
+
+======================================================================
+PART 1. WHAT WAS CHECKED AND HOW
+======================================================================
+Code read line by line, looking for ways a visitor, a customer or a script could get
+more than they should:
+  - every server action in src/actions/ (who may call it, what the browser can send)
+  - every service in src/services/ (orders, chat, reviews, shipments, products,
+    categories, availability, catalog, notifications)
+  - the API route src/app/api/chat-images/[messageId]/route.ts
+  - the auth setup src/lib/auth.ts (read only, not changed: owner's rule)
+  - all admin pages and the admin layout, and the storefront pages that show private data
+  - helpers: money, masking, email templates, after-login redirect, tracking codes
+
+Tools:
+  - Vitest unit tests. The database is never touched: repositories are replaced by fakes.
+    The order tests use an in-memory fake transaction that behaves like the real
+    compare-and-swap updates, so race conditions can be tested.
+  - The access tests call the REAL server actions and the REAL requireRole/getCurrentUser
+    code; only the session lookup is faked (guest, MEMBER, STAFF, ADMIN).
+  - A live attack against the production build (npm run build + next start on port
+    3100), for the critical finding. The owner's dev server (port 3000) was not touched.
+  - No real data was changed. No test user, order or product was created in the database.
+
+Test files (new):
+  src/services/orders.test.ts        placing orders, prices, stock, payment, statuses, races
+  src/services/reviews.test.ts       buyers only, rating rules, name masking, moderation
+  src/services/shipments.test.ts     public tracking page masking, admin form validation
+  src/services/products.test.ts      admin product form: prices, stock, images, variants
+  src/services/availability.test.ts  response time and "away until" limits
+  src/actions/access.test.ts         all 24 admin actions refuse guest/customer/staff
+  src/test/access-rules.test.ts      every admin page and action keeps its access check
+  src/lib/money.test.ts, mask.test.ts, after-login.test.ts, shipments.test.ts,
+  src/lib/email-templates.test.ts
+  (plus the chat tests from 2026-09-25: messages, crypto, image-type, MessageBubble, PaymentBar)
+
+======================================================================
+PART 2. ABUSES FOUND AND HOW THEY WERE FIXED
+======================================================================
+
+#1  CRITICAL: anyone could read the admin pages (customer names, orders, sales)
+----------------------------------------------------------------------
+Where:   src/app/admin/layout.tsx, all 11 pages under src/app/admin/
+Problem: Only the admin LAYOUT checked the ADMIN role. When the browser navigates inside
+         the app, Next.js only renders the page, not the layouts the browser says it
+         already has. A hand-made request that claims "I already have the admin layout"
+         (headers `RSC: 1` + `Next-Router-State-Tree`) skips the check completely.
+How it was proven (live, production build, anonymous visitor, no login):
+  Before the fix:
+    GET /admin/orders (normal)                 -> 307 redirect to /login  (looks safe)
+    GET /admin/orders (crafted RSC request)    -> 200, 9257 bytes, containing:
+        the total sales figure ("140,000 DT"), the order status tabs,
+        real customer names (redacted here) and links to 7 real orders
+    /admin/products, /admin/reviews, /admin/shipments -> 200 with the admin page as well
+  After the fix (same crafted requests, new build):
+    /admin/orders       -> redirect to /login, no data
+    /admin/products     -> redirect to /login, no data
+    /admin/reviews      -> redirect to /login, no data
+    /admin/shipments    -> redirect to /login, no data
+    /admin/categories   -> redirect to /login, no data
+    /admin/shipments/new, /admin/products/new -> redirect to /login, no data
+    normal GET /admin/orders -> 307 /login; home page -> 200 (nothing else broken)
+Fix:     every admin page now calls `await requirePageRole("ADMIN")` itself, as its first
+         line (the layout keeps its check too). Server actions were already safe: each
+         one calls requireRole itself (proven by src/actions/access.test.ts).
+Guard:   src/test/access-rules.test.ts fails if a new admin page forgets the check.
+
+#2  MEDIUM: the per-product quantity limit (20) could be bypassed
+----------------------------------------------------------------------
+Where:   src/services/orders.ts, mergeItems()
+Problem: The limit was checked on each cart line BEFORE duplicate lines were merged. A
+         hand-made checkout request with the same product 10 times x 20 ordered 200 units
+         in one order (for example to lock all the stock of an IEM with one guest order).
+Fix:     the limit is checked on the merged quantity. A cart may have at most 50 lines
+         (same as the cart page), so a request with thousands of lines is refused
+         before any database query.
+Tests:   "[fixed] does not let the same product be split into many lines..."
+         "[fixed] refuses a cart with an absurd number of lines"
+
+#3  MEDIUM: an order could be cancelled after the admin confirmed its payment
+----------------------------------------------------------------------
+Where:   src/services/orders.ts, setStatus()
+Problem: setStatus read the order, then updated it by id alone. If the customer pressed
+         "Cancel" while the admin was marking the order Paid, both succeeded: the paid
+         order ended up CANCELLED and its stock was put back. The fake-database test
+         showed the customer's cancel overwrote PAID.
+Fix:     compare-and-swap on the status (same pattern as the stock code): the update only
+         matches if the status is still the one that was read, otherwise the customer
+         gets "This order just changed, please reload the page" (new text in English and
+         French: errors.orderChanged). The stock is put back only after the status change
+         succeeded, inside the same transaction.
+Tests:   "[fixed] a customer's cancel can't undo a payment the admin just confirmed"
+Note:    a double-clicked cancel was NOT a bug: part 3 shows its test already passed on
+         the original code, because the stock compare-and-swap made the second cancel
+         fail. Its test is kept (without the [fixed] tag) so it stays that way.
+
+#4  LOW: no length limit on the checkout fields
+----------------------------------------------------------------------
+Where:   src/services/orders.ts (validateContact), src/components/cart/CheckoutFields.tsx
+Problem: name, email, address, city, postal code and notes had no server-side limit (the
+         form limited notes only in the browser). A script could store pages of text in
+         an order. The name is repeated in the emails the shop sends ("Hi <name>") and in
+         the admin's new-order email, so the shop's own mail server could be used to send
+         long spam text to any address typed as the customer email.
+Fix:     server limits: name 80, email 254, address 160, city 60, postal code 12, notes 500
+         characters, with a translated message naming the field (errors.detailTooLong).
+         The same limits are set as maxLength on the checkout inputs (no visual change).
+Tests:   "[fixed] refuses pages of text in the checkout fields..."
+         "names the too-long field in the customer's language"
+
+#5  LOW: very long account names shown on public reviews
+----------------------------------------------------------------------
+Where:   src/services/reviews.ts, submit()
+Problem: the review author name is the account name, which has no length limit at sign-up
+         (better-auth). It was copied onto the public product page as-is.
+Fix:     the name is cut to 60 characters before saving (and before masking).
+Test:    "[fixed] cuts a very long account name before showing it publicly"
+
+#6  LOW (hardening): the after-login redirect accepted "/\evil.tn"
+----------------------------------------------------------------------
+Where:   src/lib/after-login.ts, readAfterLogin()
+Problem: the check refused "//evil.tn" but accepted "/\evil.tn", which browsers turn into
+         https://evil.tn/. Not exploitable today: the only value ever stored is "/cart".
+Fix:     backslash refused as well.
+Test:    "never sends people to another site"
+
+#7  (found while testing, not a code bug) my own first test run was wrong
+----------------------------------------------------------------------
+While re-running the live attack after the fix, the new server failed to start because
+the OLD server (pre-fix build) was still running on port 3100: my stop command had not
+matched its process name. The first "after" results were therefore from the old build and
+were thrown away; the server was stopped by its PID and the attack repeated on the new
+build (results above). Noted here so the log is complete.
+
+Checked and found SAFE (no change needed):
+  - Nobody can make themselves ADMIN: `role` is `input: false` in the auth config.
+  - All 24 admin server actions refuse guests, customers and STAFF (tested one by one).
+  - Prices are always recomputed on the server; a price sent by the browser is ignored.
+  - The browser can't choose whose order it is: the user id comes from the session.
+  - Stock can't go below zero with two buyers at once (compare-and-swap, tested).
+  - Guest order links use a 128-bit token compared in constant time.
+  - Chat: only the order's owner and admins can read, write or load photos; photos are
+    checked by their bytes (no SVG); text and photos are encrypted at rest.
+  - Public tracking page: name, phone and address are masked on the server; internal
+    notes, AliExpress link and contact channel are never sent.
+  - Emails: everything a customer types is HTML-escaped; an email with a line break
+    (header injection) is refused.
+  - Reviews: only customers with a paid order can review; one review per product.
+  - Product and shipment forms only accept http(s) links (no javascript: or data: links).
+
+----------------------------------------------------------------------
+PART 3. PROOF THE ABUSES WERE REAL: the tests run against the ORIGINAL code
+----------------------------------------------------------------------
+The fixed files are swapped for their last committed version (git HEAD), the tests
+that cover the abuses are run, then the fixed files are put back.
+
+ × src/test/access-rules.test.ts > admin pages > src/app/admin/categories/page.tsx checks the ADMIN role itself
+ × src/test/access-rules.test.ts > admin pages > src/app/admin/orders/[id]/page.tsx checks the ADMIN role itself
+ × src/test/access-rules.test.ts > admin pages > src/app/admin/orders/page.tsx checks the ADMIN role itself
+ × src/test/access-rules.test.ts > admin pages > src/app/admin/page.tsx checks the ADMIN role itself
+ × src/test/access-rules.test.ts > admin pages > src/app/admin/products/[id]/page.tsx checks the ADMIN role itself
+ × src/test/access-rules.test.ts > admin pages > src/app/admin/products/new/page.tsx checks the ADMIN role itself
+ × src/test/access-rules.test.ts > admin pages > src/app/admin/products/page.tsx checks the ADMIN role itself
+ × src/test/access-rules.test.ts > admin pages > src/app/admin/reviews/page.tsx checks the ADMIN role itself
+ × src/test/access-rules.test.ts > admin pages > src/app/admin/shipments/[id]/page.tsx checks the ADMIN role itself
+ × src/test/access-rules.test.ts > admin pages > src/app/admin/shipments/new/page.tsx checks the ADMIN role itself
+ × src/test/access-rules.test.ts > admin pages > src/app/admin/shipments/page.tsx checks the ADMIN role itself
+ × src/services/reviews.test.ts > writing a review > [fixed] cuts a very long account name before showing it publicly
+ × src/services/orders.test.ts > placing an order: abuse checks > [fixed] does not let the same product be split into many lines to pass the per-line limit
+ × src/services/orders.test.ts > placing an order: abuse checks > [fixed] refuses a cart with an absurd number of lines
+ × src/services/orders.test.ts > placing an order: abuse checks > [fixed] refuses pages of text in the checkout fields (they go into admin and customer emails)
+ ✓ src/services/orders.test.ts > changing an order's status > a double-clicked cancel puts the stock back only once (the stock compare-and-swap already ensured this)
+ × src/services/orders.test.ts > changing an order's status > [fixed] a customer's cancel can't undo a payment the admin just confirmed
+ × src/lib/after-login.test.ts > coming back after login (no open redirect) > never sends people to another site
+⎯⎯⎯⎯⎯⎯ Failed Tests 19 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  19 failed | 46 passed (65)
+
+Expected: every test above fails (×) on the original code, except the double-clicked cancel (✓),
+which the old stock compare-and-swap already protected (see #3).
+Fixed files restored: yes, all 14 files identical to the fixed versions
+
+----------------------------------------------------------------------
+PART 4. ALL UNIT TESTS ON THE FIXED CODE: npx vitest run --reporter=verbose
+----------------------------------------------------------------------
+
+ RUN  v5.0.2 /home/dario/Documents/dev/membership
+
+ ✓ src/test/access-rules.test.ts > admin pages > finds the admin pages 8ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/categories/page.tsx checks the ADMIN role itself 2ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/orders/[id]/page.tsx checks the ADMIN role itself 1ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/orders/page.tsx checks the ADMIN role itself 1ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/page.tsx checks the ADMIN role itself 1ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/products/[id]/page.tsx checks the ADMIN role itself 1ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/products/new/page.tsx checks the ADMIN role itself 1ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/products/page.tsx checks the ADMIN role itself 1ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/reviews/page.tsx checks the ADMIN role itself 2ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/shipments/[id]/page.tsx checks the ADMIN role itself 1ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/shipments/new/page.tsx checks the ADMIN role itself 1ms
+ ✓ src/test/access-rules.test.ts > admin pages > src/app/admin/shipments/page.tsx checks the ADMIN role itself 1ms
+ ✓ src/test/access-rules.test.ts > server actions > src/actions/availability.ts: every exported action checks the caller or is deliberately public 2ms
+ ✓ src/test/access-rules.test.ts > server actions > src/actions/catalog.ts: every exported action checks the caller or is deliberately public 0ms
+ ✓ src/test/access-rules.test.ts > server actions > src/actions/categories.ts: every exported action checks the caller or is deliberately public 1ms
+ ✓ src/test/access-rules.test.ts > server actions > src/actions/locale.ts: every exported action checks the caller or is deliberately public 0ms
+ ✓ src/test/access-rules.test.ts > server actions > src/actions/messages.ts: every exported action checks the caller or is deliberately public 1ms
+ ✓ src/test/access-rules.test.ts > server actions > src/actions/orders.ts: every exported action checks the caller or is deliberately public 2ms
+ ✓ src/test/access-rules.test.ts > server actions > src/actions/products.ts: every exported action checks the caller or is deliberately public 1ms
+ ✓ src/test/access-rules.test.ts > server actions > src/actions/reviews.ts: every exported action checks the caller or is deliberately public 1ms
+ ✓ src/test/access-rules.test.ts > server actions > src/actions/shipments.ts: every exported action checks the caller or is deliberately public 1ms
+ ✓ src/services/reviews.test.ts > writing a review > lets a customer who paid for the product review it, and updates the product's rating 16ms
+ ✓ src/services/reviews.test.ts > writing a review > refuses guests and people who didn't buy (or only have a pending / cancelled order) 12ms
+ ✓ src/services/reviews.test.ts > writing a review > refuses ratings outside 1 to 5 and messages over 1000 characters 5ms
+ ✓ src/services/reviews.test.ts > writing a review > masks the name before saving when the customer hides it 3ms
+ ✓ src/services/reviews.test.ts > writing a review > [fixed] cuts a very long account name before showing it publicly 2ms
+ ✓ src/services/reviews.test.ts > writing a review > edits the existing review instead of adding a second one 3ms
+ ✓ src/services/reviews.test.ts > deleting a review > lets the author and admins delete it, and refreshes the rating 3ms
+ ✓ src/services/reviews.test.ts > deleting a review > refuses anyone else 4ms
+ ✓ src/services/reviews.test.ts > admin moderation > hiding a review updates the product's rating 3ms
+ ✓ src/services/reviews.test.ts > admin moderation > keeps replies under 600 characters 6ms
+ ✓ src/services/reviews.test.ts > review links on an order > are only for the owner of a paid order 4ms
+ ✓ src/services/orders.test.ts > placing an order: prices and stock come from the database > prices the order from the database and takes the stock 38ms
+ ✓ src/services/orders.test.ts > placing an order: prices and stock come from the database > ignores any price the browser sends 6ms
+ ✓ src/services/orders.test.ts > placing an order: prices and stock come from the database > gives free shipping from 150 DT of physical items 9ms
+ ✓ src/services/orders.test.ts > placing an order: prices and stock come from the database > refuses more than the stock, hidden products and unknown products 63ms
+ ✓ src/services/orders.test.ts > placing an order: prices and stock come from the database > refuses a product with options unless an active option is chosen 16ms
+ ✓ src/services/orders.test.ts > placing an order: prices and stock come from the database > fails cleanly when someone else bought the last item meanwhile 49ms
+ ✓ src/services/orders.test.ts > placing an order: abuse checks > [fixed] does not let the same product be split into many lines to pass the per-line limit 4ms
+ ✓ src/services/orders.test.ts > placing an order: abuse checks > still merges duplicate lines that stay under the limit 4ms
+ ✓ src/services/orders.test.ts > placing an order: abuse checks > [fixed] refuses a cart with an absurd number of lines 10ms
+ ✓ src/services/orders.test.ts > placing an order: abuse checks > refuses zero, negative and fractional quantities 8ms
+ ✓ src/services/orders.test.ts > placing an order: abuse checks > [fixed] refuses pages of text in the checkout fields (they go into admin and customer emails) 9ms
+ ✓ src/services/orders.test.ts > placing an order: abuse checks > names the too-long field in the customer's language 1ms
+ ✓ src/services/orders.test.ts > placing an order: abuse checks > limits one email to 5 orders an hour 1ms
+ ✓ src/services/orders.test.ts > placing an order: abuse checks > checks the contact details 4ms
+ ✓ src/services/orders.test.ts > placing an order: digital products and payment > needs an account for digital products 1ms
+ ✓ src/services/orders.test.ts > placing an order: digital products and payment > only accepts the payment methods the shop offers (never cash on delivery for digital) 7ms
+ ✓ src/services/orders.test.ts > placing an order: digital products and payment > places a digital order for a signed-in customer, with no shipping and no guest link 2ms
+ ✓ src/services/orders.test.ts > who can see an order > shows a guest order only with its secret link 4ms
+ ✓ src/services/orders.test.ts > who can see an order > shows an account order to its owner and admins only 2ms
+ ✓ src/services/orders.test.ts > changing an order's status > puts the stock back when an order is cancelled 3ms
+ ✓ src/services/orders.test.ts > changing an order's status > a double-clicked cancel puts the stock back only once (the stock compare-and-swap already ensured this) 2ms
+ ✓ src/services/orders.test.ts > changing an order's status > [fixed] a customer's cancel can't undo a payment the admin just confirmed 1ms
+ ✓ src/services/orders.test.ts > changing an order's status > keeps a cancelled order cancelled 4ms
+ ✓ src/services/orders.test.ts > changing an order's status > never marks an order with nothing to ship as Shipped 1ms
+ ✓ src/services/orders.test.ts > changing an order's status > sends the 'payment confirmed' message only the first time 2ms
+ ✓ src/services/orders.test.ts > customer cancelling > only lets the owner (or the guest link) cancel, and only while pending 2ms
+ ✓ src/services/orders.test.ts > the customer's 'Payment sent' > marks the payment submitted and tells the store 2ms
+ ✓ src/services/orders.test.ts > the customer's 'Payment sent' > is refused for other people, without a proof, on cash orders and twice 5ms
+ ✓ src/services/orders.test.ts > admin payment tools > asks for a new proof only when one is waiting 2ms
+ ✓ src/services/orders.test.ts > admin payment tools > marks refunded only a cancelled order whose money was received 2ms
+ ✓ src/services/orders.test.ts > admin payment tools > never sends the delivery email for an unpaid order 4ms
+ ✓ src/services/availability.test.ts > AvailabilityService > uses 15 minutes when nothing was set, and ignores an 'away' that has passed 20ms
+ ✓ src/services/availability.test.ts > AvailabilityService > accepts a response time between 1 minute and 24 hours 12ms
+ ✓ src/services/availability.test.ts > AvailabilityService > accepts an 'away until' in the next 60 days only 81ms
+ ✓ src/lib/after-login.test.ts > coming back after login (no open redirect) > follows a path on this site 12ms
+ ✓ src/lib/after-login.test.ts > coming back after login (no open redirect) > never sends people to another site 3ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > shows the customer's own message as theirs 309ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > labels store messages with the store name for the customer 81ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > shows admins which staff member wrote a store message 17ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > shows the photo through the private image route 25ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > hides login details until the person taps Show 66ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > deletes login details only after confirming 25ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > shows a deleted notice instead of wiped login details 14ms
+ ✓ src/components/chat/MessageBubble.test.tsx > MessageBubble > speaks French when the visitor chose French 16ms
+ ✓ src/services/messages.test.ts > who can use a chat > lets the order's owner open it 15ms
+ ✓ src/services/messages.test.ts > who can use a chat > lets an admin open it as the store 2ms
+ ✓ src/services/messages.test.ts > who can use a chat > refuses guests, other customers and customers pretending to be the store 7ms
+ ✓ src/services/messages.test.ts > who can use a chat > refuses an order that doesn't exist 2ms
+ ✓ src/services/messages.test.ts > opening a chat > marks the other side's messages as read 3ms
+ ✓ src/services/messages.test.ts > opening a chat > shows the staff member's name to admins only 3ms
+ ✓ src/services/messages.test.ts > opening a chat > lets the customer mark an online payment as sent while the order is pending 2ms
+ ✓ src/services/messages.test.ts > opening a chat > has no payment button for cash on delivery 2ms
+ ✓ src/services/messages.test.ts > opening a chat > lets the admin ask for a new proof once the customer said they paid 4ms
+ ✓ src/services/messages.test.ts > opening a chat > shows the stage once the order is paid 3ms
+ ✓ src/services/messages.test.ts > opening a chat > reports a cancelled order's chat as closed 1ms
+ ✓ src/services/messages.test.ts > sending a message > saves trimmed text with the sender 3ms
+ ✓ src/services/messages.test.ts > sending a message > refuses empty and too long messages 5ms
+ ✓ src/services/messages.test.ts > sending a message > refuses messages on a cancelled order 2ms
+ ✓ src/services/messages.test.ts > sending a message > slows down someone sending too many messages 4ms
+ ✓ src/services/messages.test.ts > sending a message > stores a photo with the type read from its bytes 6ms
+ ✓ src/services/messages.test.ts > sending a message > refuses photos that are not JPG/PNG/WebP, empty or too large 3ms
+ ✓ src/services/messages.test.ts > sending a message > refuses photos on cash-on-delivery orders 1ms
+ ✓ src/services/messages.test.ts > wiping login details > deletes the photo and blanks a sensitive message 1ms
+ ✓ src/services/messages.test.ts > wiping login details > won't wipe ordinary messages or messages from another order 2ms
+ ✓ src/services/messages.test.ts > getting a chat photo > gives the photo to the owner and to admins 3ms
+ ✓ src/services/messages.test.ts > getting a chat photo > gives nothing to guests or other customers 2ms
+ ✓ src/services/messages.test.ts > getting a chat photo > gives nothing when the photo can't be read 3ms
+ ✓ src/services/messages.test.ts > unread badges > counts unread store messages per order for the customer 3ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentSentBox (customer's Payment sent button) > is hidden when the customer can't mark the payment as sent 111ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentSentBox (customer's Payment sent button) > stays disabled until a proof photo is uploaded 53ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentSentBox (customer's Payment sent button) > calls onMarkSent once the proof is there 70ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentSentBox (customer's Payment sent button) > is disabled while another action runs 27ms
+ ✓ src/services/shipments.test.ts > public tracking page > masks the customer's name, phone and address on the server 173ms
+ ✓ src/services/shipments.test.ts > public tracking page > never includes internal notes, the AliExpress link or the contact channel 7ms
+ ✓ src/services/shipments.test.ts > public tracking page > returns nothing for an unknown or malformed code 5ms
+ ✓ src/services/shipments.test.ts > admin shipment form > creates a shipment with an unguessable tracking code 3ms
+ ✓ src/services/shipments.test.ts > admin shipment form > only accepts http(s) links, so no javascript: link can reach a page 5ms
+ ✓ src/services/shipments.test.ts > admin shipment form > validates names, quantity, phone, date and text lengths 8ms
+ ✓ src/services/shipments.test.ts > admin shipment form > rejects fields that are not text (a hand-made request) 6ms
+ ✓ src/services/shipments.test.ts > admin shipment form > won't remove the first timeline entry, or an entry from another shipment 18ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentBar (banner above the messages) > tells the customer the store is checking their payment 80ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentBar (banner above the messages) > lets the admin ask for a new proof 27ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentBar (banner above the messages) > shows the order's stage instead once the payment is confirmed 10ms
+ ✓ src/components/chat/PaymentBar.test.tsx > PaymentBar (banner above the messages) > shows nothing on a cancelled order 5ms
+ ✓ src/lib/crypto.test.ts > chat text encryption > encrypts and decrypts a message with the key 23ms
+ ✓ src/lib/crypto.test.ts > chat text encryption > gives a different ciphertext each time for the same text 11ms
+ ✓ src/lib/crypto.test.ts > chat text encryption > stores plain text when no key is set 2ms
+ ✓ src/lib/crypto.test.ts > chat text encryption > passes old plaintext messages through unchanged 8ms
+ ✓ src/lib/crypto.test.ts > chat text encryption > shows the locked text when the key is wrong or missing 9ms
+ ✓ src/lib/crypto.test.ts > chat text encryption > refuses a key that is not 32 bytes 8ms
+ ✓ src/lib/crypto.test.ts > chat photo encryption > round-trips a photo's base64 42ms
+ ✓ src/lib/crypto.test.ts > chat photo encryption > returns null for a photo it cannot decrypt 7ms
+ ✓ src/services/products.test.ts > admin product form > stores the price in millimes and makes a slug from the name 30ms
+ ✓ src/services/products.test.ts > admin product form > adds -2 when the slug is taken, and never changes a slug on rename 10ms
+ ✓ src/services/products.test.ts > admin product form > refuses negative, too precise or non-numeric prices and stock 31ms
+ ✓ src/services/products.test.ts > admin product form > only accepts https (or site) image addresses, at most 8 23ms
+ ✓ src/services/products.test.ts > admin product form > takes the lowest active variant price as the product price 6ms
+ ✓ src/services/products.test.ts > admin product form > refuses duplicate variant names and all-inactive variants 14ms
+ ✓ src/services/products.test.ts > admin product form > refuses an upload that is not really a photo 5ms
+ ✓ src/lib/email-templates.test.ts > email templates escape customer text > in the order confirmation 27ms
+ ✓ src/lib/email-templates.test.ts > email templates escape customer text > in the admin's new-order alert 6ms
+ ✓ src/lib/email-templates.test.ts > email templates escape customer text > in the delivery email (the admin's text is shown as text, line breaks kept) 5ms
+ ✓ src/lib/money.test.ts > money (integer millimes) > parses dinars typed by the admin 9ms
+ ✓ src/lib/money.test.ts > money (integer millimes) > refuses negative, over-precise, huge or non-numeric amounts 2ms
+ ✓ src/lib/money.test.ts > money (integer millimes) > formats millimes the same way in every language 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > covers every admin action exported from src/actions 11ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setAvailableAction refuses guests, customers and staff without touching any service 10ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setAwayAction refuses guests, customers and staff without touching any service 3ms
+ ✓ src/actions/access.test.ts > admin-only server actions > createCategoryAction refuses guests, customers and staff without touching any service 3ms
+ ✓ src/actions/access.test.ts > admin-only server actions > renameCategoryAction refuses guests, customers and staff without touching any service 4ms
+ ✓ src/actions/access.test.ts > admin-only server actions > deleteCategoryAction refuses guests, customers and staff without touching any service 8ms
+ ✓ src/actions/access.test.ts > admin-only server actions > updateCategorySettingsAction refuses guests, customers and staff without touching any service 2ms
+ ✓ src/actions/access.test.ts > admin-only server actions > uploadProductImageAction refuses guests, customers and staff without touching any service 7ms
+ ✓ src/actions/access.test.ts > admin-only server actions > createProductAction refuses guests, customers and staff without touching any service 3ms
+ ✓ src/actions/access.test.ts > admin-only server actions > updateProductAction refuses guests, customers and staff without touching any service 4ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setProductFeaturedAction refuses guests, customers and staff without touching any service 5ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setProductActiveAction refuses guests, customers and staff without touching any service 2ms
+ ✓ src/actions/access.test.ts > admin-only server actions > deleteProductAction refuses guests, customers and staff without touching any service 3ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setReviewHiddenAction refuses guests, customers and staff without touching any service 3ms
+ ✓ src/actions/access.test.ts > admin-only server actions > replyToReviewAction refuses guests, customers and staff without touching any service 2ms
+ ✓ src/actions/access.test.ts > admin-only server actions > createShipmentAction refuses guests, customers and staff without touching any service 2ms
+ ✓ src/actions/access.test.ts > admin-only server actions > updateShipmentAction refuses guests, customers and staff without touching any service 2ms
+ ✓ src/actions/access.test.ts > admin-only server actions > addShipmentUpdateAction refuses guests, customers and staff without touching any service 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > removeShipmentEventAction refuses guests, customers and staff without touching any service 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > deleteShipmentAction refuses guests, customers and staff without touching any service 2ms
+ ✓ src/actions/access.test.ts > admin-only server actions > sendDeliveryEmailAction refuses guests, customers and staff without touching any service 2ms
+ ✓ src/actions/access.test.ts > admin-only server actions > previewDeliveryEmailAction refuses guests, customers and staff without touching any service 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > markRefundedAction refuses guests, customers and staff without touching any service 3ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setOrderStatusAction refuses guests, customers and staff without touching any service 2ms
+ ✓ src/actions/access.test.ts > admin-only server actions > requestNewProofAction refuses guests, customers and staff without touching any service 3ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setAvailableAction works for an admin 5ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setAwayAction works for an admin 4ms
+ ✓ src/actions/access.test.ts > admin-only server actions > createCategoryAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > renameCategoryAction works for an admin 9ms
+ ✓ src/actions/access.test.ts > admin-only server actions > deleteCategoryAction works for an admin 2ms
+ ✓ src/actions/access.test.ts > admin-only server actions > updateCategorySettingsAction works for an admin 3ms
+ ✓ src/actions/access.test.ts > admin-only server actions > uploadProductImageAction works for an admin 2ms
+ ✓ src/actions/access.test.ts > admin-only server actions > createProductAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > updateProductAction works for an admin 3ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setProductFeaturedAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setProductActiveAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > deleteProductAction works for an admin 2ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setReviewHiddenAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > replyToReviewAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > createShipmentAction works for an admin 3ms
+ ✓ src/actions/access.test.ts > admin-only server actions > updateShipmentAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > addShipmentUpdateAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > removeShipmentEventAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > deleteShipmentAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > sendDeliveryEmailAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > previewDeliveryEmailAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > markRefundedAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > setOrderStatusAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > requestNewProofAction works for an admin 1ms
+ ✓ src/actions/access.test.ts > admin-only server actions > refuses an order status that doesn't exist, even for the admin 1ms
+ ✓ src/actions/access.test.ts > customer actions pass who is calling to the service (which checks it) > never lets the browser choose the user id of an order 6ms
+ ✓ src/actions/access.test.ts > customer actions pass who is calling to the service (which checks it) > rejects a cart whose lines are not the expected shape 3ms
+ ✓ src/actions/access.test.ts > customer actions pass who is calling to the service (which checks it) > rejects a chat attachment that is not a file 3ms
+ ✓ src/lib/mask.test.ts > masking personal details > keeps only the first and last letter of each name 10ms
+ ✓ src/lib/mask.test.ts > masking personal details > hides all but the last 3 digits of a phone 3ms
+ ✓ src/lib/mask.test.ts > masking personal details > hides house numbers completely 1ms
+ ✓ src/lib/mask.test.ts > masking personal details > masks an email for the chat 4ms
+ ✓ src/lib/image-type.test.ts > sniffImageType > recognises JPEG, PNG and WebP from their first bytes 8ms
+ ✓ src/lib/image-type.test.ts > sniffImageType > rejects SVG, other RIFF files and random bytes 2ms
+ ✓ src/lib/shipments.test.ts > normalizeTrackingCode > accepts the code however it is typed 19ms
+ ✓ src/lib/shipments.test.ts > normalizeTrackingCode > returns an empty code for anything else 5ms
+
+ Test Files  17 passed (17)
+      Tests  198 passed (198)
+   Start at  01:02:29
+   Duration  17.18s (environment 32%, setup 29%, import 18%, transform 12%, tests 6%, worker 1%)
+
+
+exit code: 0
+
+----------------------------------------------------------------------
+PART 5. TYPECHECK: npm run typecheck
+----------------------------------------------------------------------
+
+> membership@0.1.0 typecheck
+> tsc --noEmit
+
+exit code: 0
+
+----------------------------------------------------------------------
+PART 6. LINT: npm run lint
+----------------------------------------------------------------------
+
+> membership@0.1.0 lint
+> eslint
+
+exit code: 0
+
+----------------------------------------------------------------------
+PART 7. PRODUCTION BUILD: npm run build (last lines)
+----------------------------------------------------------------------
+
+
+> membership@0.1.0 postbuild
+> node scripts/prepare-standalone.mjs
+
+standalone server ready: npm run start:prod
+exit code: 0
+
+======================================================================
+PART 8. NOT FIXED: FOR THE OWNER TO DECIDE
+======================================================================
+These change how the shop works, so they were not changed without asking.
+
+A. Stock can be held by fake guest orders (medium)
+   Physical products can be ordered as a guest (cash on delivery). The limit is 5 orders
+   per email per hour, but a script can use a new email for each order and hold all the
+   IEM stock in PENDING orders until the admin cancels them by hand.
+   Options: limit per phone number too, require an account for physical orders as well,
+   or cancel unconfirmed guest orders automatically after some hours.
+
+B. "Payment sent" pressed twice at the same moment (low)
+   Two simultaneous clicks can both pass the checks: the admin gets two chat messages
+   and two emails. Nothing is lost or paid twice. Could use the same compare-and-swap
+   as fix #3 if wanted.
+
+C. Hidden products can still be looked up by id in the cart (low)
+   getCartLinesAction returns the name and price of a product that was switched off,
+   if someone knows its id (a random UUID, so hard to guess). It is shown as unavailable
+   and can't be ordered.
+
+D. STAFF role
+   STAFF exists in the database but has no rights anywhere (tested: every admin action
+   refuses it). Fine as long as nobody expects staff accounts to work.
+
+======================================================================
+FILES CHANGED
+======================================================================
+Fixes:
+  src/app/admin/**/page.tsx (11 pages)   own ADMIN check                       (#1)
+  src/services/orders.ts                 merged quantity, 50 lines max,
+                                         field limits, status compare-and-swap (#2 #3 #4)
+  src/components/cart/CheckoutFields.tsx maxLength on inputs (no visual change) (#4)
+  src/i18n/messages/en.ts + fr.ts        errors.orderChanged, errors.detailTooLong
+  src/services/reviews.ts                author name cut to 60 characters       (#5)
+  src/lib/after-login.ts                 refuse "/\"                            (#6)
+Tests: the 12 new test files listed in part 1 (and CLAUDE.md updated)
