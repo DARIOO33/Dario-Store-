@@ -76,13 +76,14 @@ export const legalFr: LegalTexts = {
       {
         heading: "Qui d'autre les traite",
         paragraphs: [
-          "Les prestataires qui nous aident à faire fonctionner la boutique : notre hébergeur et fournisseur de base de données, Cloudinary (stockage des images), notre fournisseur d'e-mails (e-mails de commande) et Google si vous choisissez de vous connecter avec Google. Ils ne traitent les données que pour fournir leur service.",
+          "Les prestataires qui nous aident à faire fonctionner la boutique : notre hébergeur et fournisseur de base de données, Cloudinary (stockage des images), notre fournisseur d'e-mails (e-mails de commande), Google si vous choisissez de vous connecter avec Google, et Meta (le Pixel Meta, voir « Cookies et stockage »). Ils ne traitent les données que pour fournir leur service.",
         ],
       },
       {
         heading: "Cookies et stockage",
         paragraphs: [
-          "Nous utilisons un cookie de connexion (pour vous garder connecté), un cookie de langue (anglais ou français) et le stockage de votre navigateur pour votre panier. Aucun cookie publicitaire ou de pistage.",
+          "Nous utilisons un cookie de connexion (pour vous garder connecté), un cookie de langue (anglais ou français) et le stockage de votre navigateur pour votre panier.",
+          "Nous utilisons aussi le Pixel Meta (Facebook/Instagram) pour mesurer nos publicités : il enregistre les pages et produits consultés, les ajouts au panier et les achats (produit, quantité et montant), avec les cookies de Meta. Nous ne lui envoyons jamais votre nom, e-mail, téléphone ou adresse. Vous pouvez limiter cela dans votre navigateur ou dans vos paramètres publicitaires Facebook/Instagram.",
         ],
       },
       {

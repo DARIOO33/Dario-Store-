@@ -6,6 +6,7 @@ import { authClient } from "@/src/lib/auth-client";
 import { placeOrderAction } from "@/src/actions/orders";
 import { cartKey } from "@/src/lib/cart-key";
 import { rememberPlacedOrder } from "@/src/lib/placed-order";
+import { pixel } from "@/src/lib/meta-pixel";
 import { AVAILABLE_ONLINE_METHODS } from "@/src/lib/payments";
 import { useCart } from "@/src/components/cart/CartProvider";
 import EmptyState from "@/src/components/ui/EmptyState";
@@ -57,6 +58,10 @@ export default function CartView({ availability }: { availability: Availability 
     e.preventDefault();
     setError("");
     setSubmitting(true);
+    pixel.initiateCheckout(
+      usable.map((row) => ({ productId: row.line.productId, quantity: row.line.quantity, priceMillimes: row.product.priceMillimes })),
+      totals.total,
+    );
 
     try {
       const result = await placeOrderAction({

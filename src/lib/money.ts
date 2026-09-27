@@ -25,6 +25,11 @@ export function millimesToInput(millimes: number) {
   return (millimes / 1000).toFixed(3);
 }
 
+// Millimes -> dinars as a plain number (12500 -> 12.5), for services that want an amount, not text (Meta Pixel).
+export function millimesToDinars(millimes: number) {
+  return millimes / 1000;
+}
+
 // Just the number ("12,500"), for places that style the "DT" separately.
 export function formatAmount(millimes: number) {
   return formatter.format(millimes / 1000);

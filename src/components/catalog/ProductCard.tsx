@@ -45,7 +45,7 @@ export default async function ProductCard({ product }: { product: ProductCardDat
               →
             </Link>
           ) : (
-            <QuickAdd productId={product.id} available={product.available} stock={null} />
+            <QuickAdd productId={product.id} name={product.name} priceMillimes={product.priceMillimes} available={product.available} stock={null} />
           )}
         </div>
       </div>

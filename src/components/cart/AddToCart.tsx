@@ -4,17 +4,21 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MAX_QUANTITY_PER_LINE } from "@/src/lib/store";
 import { useCart } from "@/src/components/cart/CartProvider";
+import { pixel } from "@/src/lib/meta-pixel";
 import { useT } from "@/src/i18n/client";
 
 type Props = {
   productId: string;
+  // For the Meta Pixel "AddToCart" event only; the server always looks the price up itself.
+  name: string;
+  priceMillimes: number;
   variantId?: string | null;
   available: boolean;
   stock: number | null;
 };
 
 // Small "+" on product cards.
-export function QuickAdd({ productId, variantId = null, available, stock }: Props) {
+export function QuickAdd({ productId, name, priceMillimes, variantId = null, available, stock }: Props) {
   const t = useT();
   const { add } = useCart();
   const [added, setAdded] = useState(false);
@@ -34,6 +38,7 @@ export function QuickAdd({ productId, variantId = null, available, stock }: Prop
       aria-label={t("cart.addToCartLabel")}
       onClick={() => {
         add({ productId, variantId }, 1, stock);
+        pixel.addToCart({ productId, name, priceMillimes, quantity: 1 });
         setAdded(true);
       }}
     >
@@ -43,7 +48,7 @@ export function QuickAdd({ productId, variantId = null, available, stock }: Prop
 }
 
 // Quantity stepper + add button on the product page.
-export function AddToCartPanel({ productId, variantId = null, available, stock }: Props) {
+export function AddToCartPanel({ productId, name, priceMillimes, variantId = null, available, stock }: Props) {
   const t = useT();
   const { add } = useCart();
   const max = Math.min(MAX_QUANTITY_PER_LINE, stock ?? MAX_QUANTITY_PER_LINE);
@@ -76,6 +81,7 @@ export function AddToCartPanel({ productId, variantId = null, available, stock }
         style={{ flex: 1 }}
         onClick={() => {
           add({ productId, variantId }, quantity, stock);
+          pixel.addToCart({ productId, name, priceMillimes, quantity });
           setAdded(true);
         }}
       >

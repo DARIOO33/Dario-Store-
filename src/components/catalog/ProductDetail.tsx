@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Img from "@/src/components/ui/Img";
 import Price from "@/src/components/ui/Price";
 import Stars from "@/src/components/reviews/Stars";
@@ -10,6 +10,7 @@ import { formatMillimes } from "@/src/lib/money";
 import { FREE_SHIPPING_FROM_MILLIMES, SHIPPING_FLAT_MILLIMES } from "@/src/lib/store";
 import type { ProductDetailData } from "@/src/services/catalog";
 import { useT } from "@/src/i18n/client";
+import { pixel } from "@/src/lib/meta-pixel";
 
 // The interactive top half of a product page. It owns the chosen variant so
 // the photo, price, stock and add-to-cart button all follow it.
@@ -25,6 +26,11 @@ export default function ProductDetail({ product }: { product: ProductDetailData 
   const stock = variant ? variant.stock : product.stock;
   const available = variant ? variant.available : product.available;
   const lowStock = stock !== null && stock > 0 && stock <= 5;
+
+  // One Meta Pixel "ViewContent" per product page (not per option picked).
+  useEffect(() => {
+    pixel.viewContent({ id: product.id, name: product.name, priceMillimes: product.priceMillimes });
+  }, [product.id, product.name, product.priceMillimes]);
 
   // Choosing a variant shows its photo; a thumbnail click overrides that until
   // the next variant is chosen.
@@ -104,7 +110,7 @@ export default function ProductDetail({ product }: { product: ProductDetailData 
         </div>
 
         <div className="pdpBuy">
-          <AddToCartPanel key={variantId ?? "base"} productId={product.id} variantId={variantId} available={available} stock={stock} />
+          <AddToCartPanel key={variantId ?? "base"} productId={product.id} name={variant ? `${product.name} (${variant.name})` : product.name} priceMillimes={price} variantId={variantId} available={available} stock={stock} />
         </div>
 
         {product.description && (

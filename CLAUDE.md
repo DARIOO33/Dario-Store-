@@ -169,6 +169,10 @@ npm run seed:store     # demo catalogue
 - `src/lib/readiness.ts` is the launch checklist: add a line there when a new required setting appears.
 - Legal texts live in `src/i18n/legal/{en,fr}.ts` (not the main dictionary); keep both languages in step.
 - Contact channels: `CONTACT` in `lib/store.ts`.
+- Meta Pixel (`META_PIXEL_ID` in `lib/store.ts`): loaded by the root layout in production builds only, never on `/admin`.
+  Events go through `pixel.*` in `lib/meta-pixel.ts` (ViewContent, AddToCart, InitiateCheckout, Purchase with the order
+  id as eventID, CompleteRegistration). Send product ids, quantities and amounts only — never names, emails, phones or
+  addresses. The privacy policy (`i18n/legal`) describes it: keep both in step if you add events or data.
 
 ## Known gaps (don't "fix" silently — ask)
 

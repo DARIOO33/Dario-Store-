@@ -3,7 +3,8 @@ import "@fontsource/anton";
 import "@fontsource-variable/jetbrains-mono";
 import "@fontsource-variable/instrument-sans";
 import "./globals.css";
-import { siteUrl, STORE_NAME } from "@/src/lib/store";
+import { META_PIXEL_ID, siteUrl, STORE_NAME } from "@/src/lib/store";
+import MetaPixel from "@/src/components/layout/MetaPixel";
 import { getLocale, getT } from "@/src/i18n/server";
 import { I18nProvider } from "@/src/i18n/client";
 
@@ -36,6 +37,8 @@ export default async function RootLayout({
     <html lang={locale}>
       <body>
         <I18nProvider locale={locale}>{children}</I18nProvider>
+        {/* Only the live site reports to Meta: `npm run dev` never sends test visits. */}
+        {process.env.NODE_ENV === "production" && META_PIXEL_ID && <MetaPixel pixelId={META_PIXEL_ID} />}
       </body>
     </html>
   );

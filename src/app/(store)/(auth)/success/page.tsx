@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { clearAfterLogin, readAfterLogin } from "@/src/lib/after-login";
 import { useT } from "@/src/i18n/client";
+import { pixel } from "@/src/lib/meta-pixel";
 
 const REDIRECT_MS = 2500;
 
@@ -12,6 +13,10 @@ function SuccessContent() {
   const t = useT();
   const router = useRouter();
   const isRegister = useSearchParams().get("type") === "register";
+
+  useEffect(() => {
+    if (isRegister) pixel.completeRegistration();
+  }, [isRegister]);
 
   useEffect(() => {
     const destination = readAfterLogin();

@@ -76,13 +76,14 @@ export const legalEn: LegalTexts = {
       {
         heading: "Who else handles it",
         paragraphs: [
-          "Service providers that help run the shop: our hosting and database provider, Cloudinary (image storage), our email provider (order emails), and Google if you choose to sign in with Google. They process data only to provide their service.",
+          "Service providers that help run the shop: our hosting and database provider, Cloudinary (image storage), our email provider (order emails), Google if you choose to sign in with Google, and Meta (the Meta Pixel, see “Cookies and storage”). They process data only to provide their service.",
         ],
       },
       {
         heading: "Cookies and storage",
         paragraphs: [
-          "We use a login cookie (to keep you signed in), a language cookie (English or French), and your browser's storage for your cart. No advertising or tracking cookies.",
+          "We use a login cookie (to keep you signed in), a language cookie (English or French), and your browser's storage for your cart.",
+          "We also use the Meta Pixel (Facebook/Instagram) to measure our ads: it records which pages and products are viewed, what is added to the cart and purchases (product, quantity and amount), with Meta's cookies. We never send it your name, email, phone or address. You can limit this in your browser or in your Facebook/Instagram ad settings.",
         ],
       },
       {

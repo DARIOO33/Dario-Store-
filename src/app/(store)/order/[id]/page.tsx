@@ -45,7 +45,13 @@ export default async function OrderPage({ params, searchParams }: Props) {
 
   return (
     <div className="wrap pageTop">
-      {sp.new && <ClearCartAfterOrder orderId={order.id} />}
+      {sp.new && (
+        <ClearCartAfterOrder
+          orderId={order.id}
+          totalMillimes={order.totalMillimes}
+          lines={order.items.flatMap((item) => (item.productId ? [{ productId: item.productId, quantity: item.quantity, priceMillimes: item.unitPriceMillimes }] : []))}
+        />
+      )}
       {sp.new && !cancelled && (
         <div className="thanks">
           <span className="thanksMark" aria-hidden="true">✓</span>
