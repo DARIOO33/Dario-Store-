@@ -87,6 +87,9 @@ npm run seed:store     # demo catalogue
   (the admin delivery button) can tell. Never send mail any other way.
   Don't cache the nodemailer transport: Next loads `email.ts` separately per bundle (pages, actions, `/api/auth`) and a
   cached copy keeps an old SMTP password (that silently broke sign-up codes while order emails worked).
+- **Production runs on Vercel**: an email sent after the response must go through `runAfterResponse()` (`lib/background.ts`,
+  Next's `after()`), never a plain `void sendEmail(...)` — Vercel pauses the function once it has answered, so the email
+  only leaves minutes later or never (this delayed the sign-up codes). `lib/background.test.ts` fails on a plain `void`.
 - Email designs live in `src/lib/email-templates.ts` (inline-styled tables, shop colours, English + French from the
   `email.*` dictionary keys). New email = a template function there + keys in both dictionaries.
 - Order-related notifications (confirmation, "payment confirmed" chat message + email, delivery email) are in

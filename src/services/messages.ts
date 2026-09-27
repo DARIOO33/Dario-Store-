@@ -8,6 +8,7 @@ import { now } from "../lib/time";
 import { PROBLEM_REPORT_DAYS, SENSITIVE_MESSAGE_DAYS } from "../lib/store";
 import { isProblemReason } from "../lib/problems";
 import { OrderNotifications } from "./order-notifications";
+import { runAfterResponse } from "../lib/background";
 import { sniffImageType } from "../lib/image-type";
 import { ChatImages } from "./chat-images";
 import { isTeam } from "../lib/roles";
@@ -196,7 +197,7 @@ export const MessageService = {
     // The team hears about a customer's message by email, once per unread batch: only when this is
     // the only customer message they haven't read yet.
     if (!access.asAdmin && (await MessageRepository.findUnread(false, [orderId])).length === 1) {
-      void OrderNotifications.customerMessage(access.order, !!image);
+      runAfterResponse(() => OrderNotifications.customerMessage(access.order, !!image));
     }
 
     return { message: toChat({ ...message, sender: access.asAdmin ? { name: viewer!.name ?? "" } : null }, access.asAdmin) };
@@ -240,7 +241,7 @@ export const MessageService = {
     const t = createTranslator(toLocale(order.locale));
     const label = t.messages.chat.problemReasons[reason];
     await MessageRepository.create({ orderId, fromAdmin: false, senderUserId: viewer!.id, body: `${t("chatSystem.problemReported", { reason: label })}\n${body}`, hasImage: false });
-    void OrderNotifications.problemReported(order, createTranslator("en").messages.chat.problemReasons[reason]);
+    runAfterResponse(() => OrderNotifications.problemReported(order, createTranslator("en").messages.chat.problemReasons[reason]));
   },
 
   // Either side of the chat can erase a "login details" message right away (for example once the top-up is done).

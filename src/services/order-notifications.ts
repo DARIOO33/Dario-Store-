@@ -5,6 +5,7 @@
 import { MessageRepository } from "../prisma/messages";
 import { OrderRepository } from "../prisma/orders";
 import { sendEmail } from "../lib/email";
+import { runAfterResponse } from "../lib/background";
 import { adminAlertEmail, adminNewOrderEmail, deliveryEmail, orderReceivedEmail, paymentConfirmedEmail } from "../lib/email-templates";
 import { paymentLabel } from "../lib/payments";
 import { formatMillimes } from "../lib/money";
@@ -64,7 +65,7 @@ async function notifyTeam(order: OrderRow) {
 export const OrderNotifications = {
   // Right after checkout: a confirmation email with the summary.
   placed: (order: OrderRow) => {
-    void notifyTeam(order);
+    runAfterResponse(() => notifyTeam(order));
     const email = orderReceivedEmail({
       locale: toLocale(order.locale),
       name: order.customerName,
@@ -81,7 +82,7 @@ export const OrderNotifications = {
       totalMillimes: order.totalMillimes,
       online: order.paymentMethod !== "CASH_ON_DELIVERY",
     });
-    void sendEmail({ to: order.customerEmail, ...email });
+    runAfterResponse(() => sendEmail({ to: order.customerEmail, ...email }));
   },
 
   // The customer says they've paid: tell the admin to check the proof.
@@ -136,7 +137,7 @@ export const OrderNotifications = {
     if (order.userId) await MessageRepository.create({ orderId: order.id, fromAdmin: true, body: fulfilment, hasImage: false });
 
     const email = paymentConfirmedEmail({ locale: toLocale(order.locale), name: order.customerName, orderNumber: order.orderNumber, orderUrl: orderUrl(order), fulfilment });
-    void sendEmail({ to: order.customerEmail, ...email });
+    runAfterResponse(() => sendEmail({ to: order.customerEmail, ...email }));
   },
 
   // The admin's delivery email. Returns the send result so the admin sees if it failed.

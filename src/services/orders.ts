@@ -8,6 +8,7 @@ import { OrderRepository, ORDER_STATUSES, type OrderStatus, type PaymentStatus }
 import { MessageRepository } from "../prisma/messages";
 import { OrderNotifications } from "./order-notifications";
 import { emailConfigured } from "../lib/email";
+import { runAfterResponse } from "../lib/background";
 import { UserError, userError } from "../lib/result";
 import { now } from "../lib/time";
 import { cartKey } from "../lib/cart-key";
@@ -419,7 +420,7 @@ export const OrderService = {
     // Two clicks at the same moment both pass the checks above; only the first one changes the payment.
     if (!(await OrderRepository.changePaymentStatus(id, ["PENDING", "FAILED"], "SUBMITTED", now()))) throw userError("errors.alreadyPaid");
     await MessageRepository.create({ orderId: id, fromAdmin: false, senderUserId: viewer.id, body: createTranslator(locale)("chatSystem.paymentSent"), hasImage: false });
-    void OrderNotifications.paymentSent(order);
+    runAfterResponse(() => OrderNotifications.paymentSent(order));
   },
 
   // The proof wasn't good enough: the payment is marked FAILED and the customer can send a new one.

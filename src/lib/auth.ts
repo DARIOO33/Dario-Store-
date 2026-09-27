@@ -3,6 +3,7 @@ import { emailOTP } from "better-auth/plugins/email-otp";
 import { Pool } from "pg";
 import "dotenv/config";
 import { sendEmail } from "./email";
+import { runAfterResponse } from "./background";
 import { verificationCodeEmail } from "./email-templates";
 import { getLocale } from "../i18n/server";
 
@@ -45,11 +46,11 @@ export const auth = betterAuth({
       allowedAttempts: 5,
       storeOTP: "hashed",
       async sendVerificationOTP({ email, otp, type }) {
-        // Not awaited on purpose: waiting on the mail server would make
-        // "this email exists" observable through response timing.
-        void getLocale()
-          .catch(() => "en" as const)
-          .then((locale) => sendEmail({ to: email, ...verificationCodeEmail({ locale, code: otp, type }) }));
+        // Sent after the response on purpose: waiting on the mail server would make
+        // "this email exists" observable through response timing. runAfterResponse (not a
+        // plain `void`) makes Vercel keep the function running until the email is sent.
+        const locale = getLocale().catch(() => "en" as const);
+        runAfterResponse(async () => sendEmail({ to: email, ...verificationCodeEmail({ locale: await locale, code: otp, type }) }));
       },
     }),
   ],
