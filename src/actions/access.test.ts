@@ -2,9 +2,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Calls the real server actions with the real requireRole/getCurrentUser (src/lib/session.ts).
 // Only the session lookup, Next's request helpers and the services are replaced.
-const session = vi.hoisted(() => ({ user: null as null | { id: string; name: string; role: string } }));
+const session = vi.hoisted(() => ({ user: null as null | { id: string; name: string; role: string; emailVerified?: boolean }, ended: [] as string[] }));
 
-vi.mock("../lib/auth", () => ({ auth: { api: { getSession: async () => (session.user ? { user: session.user } : null) } } }));
+// Accounts are verified unless a test says otherwise (emailVerified: false).
+vi.mock("../lib/auth", () => ({
+  auth: {
+    api: { getSession: async () => (session.user ? { user: { emailVerified: true, ...session.user }, session: { token: `tok-${session.user.id}` } } : null) },
+    $context: Promise.resolve({ internalAdapter: { deleteSession: async (token: string) => void session.ended.push(token) } }),
+  },
+}));
 vi.mock("next/headers", () => ({ headers: async () => new Headers(), cookies: async () => ({ get: () => undefined, set: () => {} }) }));
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
 
@@ -149,7 +155,7 @@ describe("customer actions pass who is calling to the service (which checks it)"
     (MessageService as unknown as { reportProblem: unknown }).reportProblem = spy;
 
     await messages.reportProblemAction("o-1", "NOT_WORKING", "Account locked");
-    expect(spy).toHaveBeenCalledWith("o-1", member, "NOT_WORKING", "Account locked");
+    expect(spy).toHaveBeenCalledWith("o-1", expect.objectContaining({ id: member.id }), "NOT_WORKING", "Account locked");
   });
 
   it("rejects a chat attachment that is not a file", async () => {
@@ -158,5 +164,34 @@ describe("customer actions pass who is calling to the service (which checks it)"
     data.set("image", "not a file");
     await expect(messages.sendChatMessageAction("o-1", false, data)).resolves.toMatchObject({ ok: false });
     expect(spies.calls).toEqual([]);
+  });
+});
+
+describe("an account whose email is no longer verified", () => {
+  it("[fixed] can't use admin or team actions, even with the ADMIN role", async () => {
+    session.user = { ...admin, emailVerified: false };
+    await expect(orders.setOrderStatusAction("o-1", "PAID")).rejects.toThrow("Unauthorized");
+    await expect(products.deleteProductAction("p-1")).rejects.toThrow("Unauthorized");
+    expect(spies.calls).toEqual([]);
+  });
+
+  it("[fixed] places an order as a guest, not on the account (digital items then need a login)", async () => {
+    session.user = { ...member, emailVerified: false };
+    const spy = vi.fn();
+    const { OrderService } = await import("../services/orders");
+    (OrderService as unknown as { place: unknown }).place = spy;
+
+    await orders.placeOrderAction({ items: [{ productId: "p-1", quantity: 1 }] } as never);
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ userId: null }));
+  });
+
+  it("[fixed] can't open or write in an order chat as its owner", async () => {
+    session.user = { ...member, emailVerified: false };
+    const spy = vi.fn(async () => ({}));
+    const { MessageService } = await import("../services/messages");
+    (MessageService as unknown as { open: unknown }).open = spy;
+
+    await messages.openChatAction("o-1", false);
+    expect(spy).toHaveBeenCalledWith("o-1", null, false);
   });
 });

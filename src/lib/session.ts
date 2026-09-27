@@ -8,8 +8,17 @@ import type { UserRole } from "./roles";
 // Remembered for the rest of the request, so the page and its components share one session lookup.
 export const getCurrentUser = cache(async () => {
   const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return null;
 
-  return session ? (session.user as typeof session.user & { role: UserRole }) : null;
+  // Logging in needs a verified email (auth.ts), but better-auth never checks again afterwards. If the
+  // email stops being verified (changed in the database, or a change of address), the session already
+  // open must stop working too: it is ended, and the visitor is a guest until they log in (with a code).
+  if (!session.user.emailVerified) {
+    await (await auth.$context).internalAdapter.deleteSession(session.session.token);
+    return null;
+  }
+
+  return session.user as typeof session.user & { role: UserRole };
 });
 
 // Server actions: throw when nobody is logged in.
