@@ -47,6 +47,8 @@ npm run seed:store     # demo catalogue
   browser — services recompute them.
 - User-fixable errors: `throw new UserError("…")` in services, wrap actions with `safely()`.
 - Auth: `requireRole()` in server actions (throws), `requirePageRole()` in pages/layouts (redirects).
+  `getCurrentUser()` treats an account whose email is not verified as signed out and ends its session
+  (better-auth only checks verification at login); `src/lib/session.test.ts` covers it.
   **Every admin page calls `await requirePageRole("ADMIN")` itself**: the layout check alone can be skipped with a
   hand-made request (Next renders only the page on client navigation). `src/test/access-rules.test.ts` enforces it.
 - Roles (`lib/roles.ts`): ADMIN runs everything; STAFF (`TEAM` / `isTeam()`) gets only orders, the chat, payment checks,
@@ -83,6 +85,8 @@ npm run seed:store     # demo catalogue
 - All mail goes through `sendEmail()` in `src/lib/email.ts` (SMTP via nodemailer; **does nothing but log until
   `SMTP_HOST` + `MAIL_FROM` are in `.env`**). It never throws; it returns `{ sent }` so callers that must know
   (the admin delivery button) can tell. Never send mail any other way.
+  Don't cache the nodemailer transport: Next loads `email.ts` separately per bundle (pages, actions, `/api/auth`) and a
+  cached copy keeps an old SMTP password (that silently broke sign-up codes while order emails worked).
 - Email designs live in `src/lib/email-templates.ts` (inline-styled tables, shop colours, English + French from the
   `email.*` dictionary keys). New email = a template function there + keys in both dictionaries.
 - Order-related notifications (confirmation, "payment confirmed" chat message + email, delivery email) are in

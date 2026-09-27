@@ -1,4 +1,4 @@
-import nodemailer, { type Transporter } from "nodemailer";
+import nodemailer from "nodemailer";
 
 type Email = {
   to: string;
@@ -15,17 +15,17 @@ export function emailConfigured() {
   return !!process.env.SMTP_HOST && !!process.env.MAIL_FROM;
 }
 
-let transporter: Transporter | null = null;
-
-function getTransporter() {
-  transporter ??= nodemailer.createTransport({
+// Built for each email from the current settings, never kept: Next loads this file separately for
+// pages, server actions and the /api/auth route, and a kept copy would go on using the SMTP password it
+// first saw. (nodemailer opens one connection per email anyway, so keeping it saved nothing.)
+function transport() {
+  return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT) || 587,
     // true for port 465; the other ports upgrade the connection themselves (STARTTLS).
     secure: process.env.SMTP_SECURE === "true",
     auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS ?? "" } : undefined,
   });
-  return transporter;
 }
 
 // The one place an email leaves the app. It never throws, so a mail problem can't
@@ -44,7 +44,7 @@ export async function sendEmail({ to, subject, text, html }: Email): Promise<Ema
   }
 
   try {
-    await getTransporter().sendMail({ from: process.env.MAIL_FROM, replyTo: process.env.MAIL_REPLY_TO || undefined, to, subject, text, html });
+    await transport().sendMail({ from: process.env.MAIL_FROM, replyTo: process.env.MAIL_REPLY_TO || undefined, to, subject, text, html });
     return { sent: true };
   } catch (error) {
     console.error(`[email] could not send "${subject}" to ${to}:`, error);
