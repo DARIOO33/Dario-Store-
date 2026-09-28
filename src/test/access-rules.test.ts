@@ -43,7 +43,8 @@ describe("server actions", () => {
   it.each(actionFiles)("%s: every exported action checks the caller or is deliberately public", (file) => {
     const source = readFileSync(file, "utf8");
     const actions = source.split(/^export async function /m).slice(1);
-    const PUBLIC = ["getCartLinesAction", "setLocaleAction", "placeOrderAction"];
+    // Public on purpose; the tracking ones are checked and rate-limited in ShipmentNotifications.
+    const PUBLIC = ["getCartLinesAction", "setLocaleAction", "placeOrderAction", "requestTrackingAlertsCodeAction", "verifyTrackingAlertsAction", "stopTrackingAlertsAction"];
 
     for (const action of actions) {
       const name = action.slice(0, action.indexOf("("));

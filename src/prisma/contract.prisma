@@ -398,7 +398,9 @@ model Shipment {
   customerAddress       String?
   customerCity          String?
   contactChannel        String?
-  itemName              String
+  // OLD single-item fields (itemName … estimatedArrival, quantity): replaced by ShipmentItem on 2026-09-28 and
+  // no longer read or written. Kept only until the new code is live on Vercel, then dropped.
+  itemName              String?
   itemUrl               String?
   itemImageUrl          String?
   quantity              Int            @default(1)
@@ -411,24 +413,76 @@ model Shipment {
   createdAt             Timestamptz    @default(now())
   updatedAt             Timestamptz    @default(now())
 
-  events ShipmentEvent[]
+  events      ShipmentEvent[]
+  items       ShipmentItem[]
+  subscribers ShipmentSubscriber[]
 
   @@index([status])
   @@index([createdAt])
   @@check(expression: "\"quantity\" BETWEEN 1 AND 99", name: "shipment_quantity_range")
 }
 
-// One line of a shipment's history: a status change, or a note ("held at customs").
+// One product of a shipment. A customer's order can have many, each with its own AliExpress parcel,
+// arrival date and stage (one can be delivered before the others).
+model ShipmentItem {
+  id               String         @id @default(uuid())
+  shipmentId       String
+  position         Int            @default(0)
+  name             String
+  quantity         Int            @default(1)
+  // The AliExpress link: admin only, never shown on the tracking page.
+  url              String?
+  imageUrl         String?
+  carrier          String?
+  trackingNumber   String?
+  estimatedArrival Timestamptz?
+  status           ShipmentStatus @default(RECEIVED)
+  createdAt        Timestamptz    @default(now())
+  updatedAt        Timestamptz    @default(now())
+
+  shipment Shipment        @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  events   ShipmentEvent[]
+
+  @@index([shipmentId, position])
+  @@check(expression: "\"quantity\" BETWEEN 1 AND 99", name: "shipment_item_quantity_range")
+}
+
+// One line of a shipment's history: a status change, or a note ("held at customs"). `itemId` says
+// which item it is about; null means the whole order (e.g. "We received your order").
 model ShipmentEvent {
   id         String         @id @default(uuid())
   shipmentId String
+  itemId     String?
   status     ShipmentStatus
   note       String         @default("")
   createdAt  Timestamptz    @default(now())
 
-  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  shipment Shipment      @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  item     ShipmentItem? @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@index([shipmentId, createdAt])
+}
+
+// Someone who asked for email updates on a tracking page. The address only counts once it has been
+// confirmed with the 6-digit code emailed to it (`verifiedAt`); the code is stored hashed. Each email
+// carries `unsubscribeToken` so one click stops them.
+model ShipmentSubscriber {
+  id               String       @id @default(uuid())
+  shipmentId       String
+  email            String
+  // The tracking page's language when they signed up: the emails are written in it.
+  locale           String       @default("en")
+  verifiedAt       Timestamptz?
+  codeHash         String?
+  codeExpiresAt    Timestamptz?
+  codeAttempts     Int          @default(0)
+  lastCodeSentAt   Timestamptz?
+  unsubscribeToken String       @unique
+  createdAt        Timestamptz  @default(now())
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@unique([shipmentId, email])
 }
 
 // How fast the shop answers right now, set by the admin on the dashboard. One row (id "main").

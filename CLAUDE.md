@@ -77,6 +77,13 @@ npm run seed:store     # demo catalogue
 - Public tracking (`/track/[code]`): the page must only ever receive the DTO from `ShipmentService.getPublic`
   (masked contact, no notes/links). Never pass a `Shipment` row to a public component, and never rely on CSS blur
   to hide data — mask on the server.
+- AliExpress shipments have **items** (`ShipmentItem`: own photo, parcel number, arrival date, status). `Shipment.status`
+  is the slowest active item (`overallStatus` in `services/shipments.ts`); updates pick items (all items = one history
+  line with `itemId` null). Email updates on `/track/[code]`: `services/shipment-notifications.ts` (6-digit code, hashed,
+  rate-limited, one email per confirmed subscriber with its own unsubscribe link; `/track/unsubscribe` needs a click).
+  **Pending:** the old single-item columns on `Shipment` (`itemName`, `itemUrl`, `itemImageUrl`, `quantity`, `carrier`,
+  `carrierTrackingNumber`, `estimatedArrival`) are unused since 2026-09-28; drop them from the contract (and run
+  `db:update`) only after this code is live on Vercel. Backup: `~/Documents/dev/membership-backups/`.
 - Reviews: masking the reviewer's name happens in `ReviewService.submit` before saving; keep product rating totals
   in sync through `refreshRating` whenever a review is created, edited, hidden or deleted.
 

@@ -32,9 +32,11 @@ type Frame = {
   // Extra blocks between the intro and the button (already HTML).
   body: string;
   button?: { label: string; url: string };
+  // Small print under the button (e.g. the unsubscribe link), already HTML.
+  after?: string;
 };
 
-function frame({ t, footer, kicker, title, intro, body, button }: Frame) {
+function frame({ t, footer, kicker, title, intro, body, button, after = "" }: Frame) {
   const action = button
     ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:22px;"><tr><td style="background:${INK};">
       <a href="${escape(button.url)}" style="display:inline-block;padding:14px 24px;font-family:${MONO};font-size:13px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:${PAPER};text-decoration:none;">${escape(button.label)} &rarr;</a>
@@ -56,6 +58,7 @@ function frame({ t, footer, kicker, title, intro, body, button }: Frame) {
   <tr><td style="background:${CARD};border:2px solid ${INK};border-top:0;padding:26px 28px;font-family:${BODY};font-size:15px;line-height:1.55;color:${INK};">
     ${body}
     ${action}
+    ${after}
   </td></tr>
   <tr><td style="padding:16px 4px 0;font-family:${BODY};font-size:12px;line-height:1.5;color:#847a68;">${escape(footer)}</td></tr>
 </table></td></tr></table></body></html>`;
@@ -212,5 +215,49 @@ export function adminAlertEmail(data: { kicker: string; title: string; intro: st
     subject: data.title,
     html: frame({ t, footer: `Sent by ${STORE_NAME}.`, kicker: data.kicker, title: data.title, intro: data.intro, body: "", button: { label: "Open in admin", url: data.adminUrl } }),
     text: [data.title, data.intro, `Open in admin: ${data.adminUrl}`].join("\n\n"),
+  };
+}
+
+/* ---------- 7. AliExpress tracking updates (for whoever turned them on) ---------- */
+
+export function trackingCodeEmail(data: { locale: Locale; code: string; reference: number }): Email {
+  const t = createTranslator(data.locale);
+  const subject = t("email.trackingCodeSubject", { reference: data.reference });
+  const intro = t("email.trackingCodeIntro", { reference: data.reference });
+  const body = `<div style="text-align:center;margin:4px 0 18px;"><span style="display:inline-block;background:${INK};color:${YELLOW};font-family:${MONO};font-size:36px;font-weight:bold;letter-spacing:10px;padding:16px 24px 16px 34px;">${escape(data.code)}</span></div>
+    ${paragraph(t("email.trackingCodeIgnore"))}`;
+
+  return {
+    subject,
+    html: frame({ t, footer: t("email.otpFooter", { store: STORE_NAME }), kicker: t("email.trackingKicker"), title: subject, intro, body }),
+    text: [subject, data.code, intro, t("email.trackingCodeIgnore")].join("\n\n"),
+  };
+}
+
+// `itemNames`: the items this update is about; [null] means every item of the order.
+export function trackingUpdateEmail(data: {
+  locale: Locale;
+  reference: number;
+  statusLabel: string;
+  itemNames: (string | null)[];
+  note: string;
+  trackingUrl: string;
+  unsubscribeUrl: string;
+}): Email {
+  const t = createTranslator(data.locale);
+  const subject = t("email.trackingUpdateSubject", { reference: data.reference, status: data.statusLabel });
+  const intro = t("email.trackingUpdateIntro", { reference: data.reference });
+  const names = data.itemNames.map((name) => name ?? t("email.trackingAllItems"));
+  const rows = names
+    .map((name) => `<tr><td style="padding:8px 0;border-bottom:1px dashed ${INK};">${escape(name)}</td><td align="right" style="padding:8px 0;border-bottom:1px dashed ${INK};font-family:${MONO};font-weight:bold;">${escape(data.statusLabel)}</td></tr>`)
+    .join("");
+  const note = data.note ? `<p style="margin:16px 0 0;padding:12px 14px;background:${PAPER};border:2px solid ${INK};"><strong>${escape(t("email.trackingNote"))}</strong> ${escape(data.note)}</p>` : "";
+  const stop = `<p style="margin:22px 0 0;font-size:12px;color:#847a68;">${escape(t("email.trackingWhy", { reference: data.reference }))} <a href="${escape(data.unsubscribeUrl)}" style="color:#847a68;">${escape(t("email.trackingStop"))}</a></p>`;
+  const body = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>${note}`;
+
+  return {
+    subject,
+    html: frame({ t, footer: t("email.trackingFooter", { store: STORE_NAME }), kicker: t("email.trackingKicker"), title: data.statusLabel, intro, body, button: { label: t("email.trackingFollow"), url: data.trackingUrl }, after: stop }),
+    text: [subject, intro, ...names.map((name) => `- ${name}: ${data.statusLabel}`), data.note ? `${t("email.trackingNote")} ${data.note}` : "", `${t("email.trackingFollow")}: ${data.trackingUrl}`, `${t("email.trackingStop")}: ${data.unsubscribeUrl}`].filter(Boolean).join("\n\n"),
   };
 }

@@ -251,3 +251,57 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Several items on one tracking page: each with its own photo, stage, parcel number and date. */
+.trackItems {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trackItems > li + li {
+  padding-top: 1rem;
+  border-top: 1.5px solid var(--ink);
+}
+
+.trackItemText {
+  display: grid;
+  gap: 0.3rem;
+  justify-items: start;
+}
+
+.trackSide {
+  display: grid;
+  gap: 1.2rem;
+  align-content: start;
+}
+
+.trackEventItem {
+  font-weight: 700;
+}
+
+.trackAlerts {
+  display: grid;
+  gap: 0.8rem;
+  align-content: start;
+}
+
+.trackAlerts .form {
+  justify-items: start;
+}
+
+.trackAlerts .field {
+  width: 100%;
+}
+
+.trackAlertsLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.trackAlertsLinks .linkBtn {
+  margin-left: 0;
+}

@@ -11,10 +11,12 @@ type Props = {
   onUploaded: (url: string) => void;
   // False when Cloudinary isn't set up: the button explains instead of uploading.
   enabled: boolean;
+  // The server action that stores the photo (products by default; shipments pass their own, which staff may use).
+  upload?: (form: FormData) => Promise<{ ok: true; url: string } | { ok: false; error: string }>;
 };
 
 // Uploads photos to Cloudinary and hands back their address, so nobody has to paste links.
-export default function ImageUploadButton({ label, multiple = false, onUploaded, enabled }: Props) {
+export default function ImageUploadButton({ label, multiple = false, onUploaded, enabled, upload: uploadAction = uploadProductImageAction }: Props) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(0);
   const [error, setError] = useState("");
@@ -25,7 +27,7 @@ export default function ImageUploadButton({ label, multiple = false, onUploaded,
     for (const file of files) {
       const form = new FormData();
       form.set("image", await shrinkImage(file, 2000));
-      const result = await uploadProductImageAction(form);
+      const result = await uploadAction(form);
       if (result.ok) onUploaded(result.url);
       else setError(result.error);
       setBusy((left) => left - 1);

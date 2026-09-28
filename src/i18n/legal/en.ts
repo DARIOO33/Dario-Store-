@@ -71,6 +71,7 @@ export const legalEn: LegalTexts = {
           "Order chats and their photos are stored encrypted. Chat photos are kept as private files that only you and our team can open.",
           "Messages marked as containing login details stay hidden until opened and are erased automatically after {days} days; either side can erase them earlier.",
           "Public tracking pages for AliExpress orders show your name, phone and address only partly (masked).",
+          "If you turn on email updates on a tracking page, we keep that email address (confirmed with a code) only to email you that order's updates. Every email has a link to stop them, which deletes the address.",
         ],
       },
       {

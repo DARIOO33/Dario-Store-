@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'61562973154ae20b9e06e39d16a36a657e1c87d2aa92019ddd6b3a2d995ecf8d'>;
+  StorageHashBase<'1ce07c221fab79d92dd83961f47b1c26a77092ec2f0f9c24f91c4738877e60d7'>;
 export type ExecutionHash =
   ExecutionHashBase<'42a13e7e80e40dfb70cde6d78096999f57a9fe555cccad965785e499b3108665'>;
 export type ProfileHash =
@@ -405,7 +405,7 @@ export type FieldOutputTypes = {
       readonly customerAddress: CodecTypes['pg/text@1']['output'] | null;
       readonly customerCity: CodecTypes['pg/text@1']['output'] | null;
       readonly contactChannel: CodecTypes['pg/text@1']['output'] | null;
-      readonly itemName: CodecTypes['pg/text@1']['output'] | null;
+      readonly itemName: CodecTypes['pg/text@1']['output'];
       readonly itemUrl: CodecTypes['pg/text@1']['output'] | null;
       readonly itemImageUrl: CodecTypes['pg/text@1']['output'] | null;
       readonly quantity: CodecTypes['pg/int4@1']['output'];
@@ -671,7 +671,7 @@ export type FieldInputTypes = {
       readonly customerAddress: CodecTypes['pg/text@1']['input'] | null;
       readonly customerCity: CodecTypes['pg/text@1']['input'] | null;
       readonly contactChannel: CodecTypes['pg/text@1']['input'] | null;
-      readonly itemName: CodecTypes['pg/text@1']['input'] | null;
+      readonly itemName: CodecTypes['pg/text@1']['input'];
       readonly itemUrl: CodecTypes['pg/text@1']['input'] | null;
       readonly itemImageUrl: CodecTypes['pg/text@1']['input'] | null;
       readonly quantity: CodecTypes['pg/int4@1']['input'];
@@ -941,7 +941,7 @@ export type StorageColumnTypes = {
       readonly estimatedArrival: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
       readonly id: CodecTypes['pg/text@1']['output'];
       readonly itemImageUrl: CodecTypes['pg/text@1']['output'] | null;
-      readonly itemName: CodecTypes['pg/text@1']['output'] | null;
+      readonly itemName: CodecTypes['pg/text@1']['output'];
       readonly itemUrl: CodecTypes['pg/text@1']['output'] | null;
       readonly quantity: CodecTypes['pg/int4@1']['output'];
       readonly reference: CodecTypes['pg/int4@1']['output'];
@@ -1207,7 +1207,7 @@ export type StorageColumnInputTypes = {
       readonly estimatedArrival: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
       readonly id: CodecTypes['pg/text@1']['input'];
       readonly itemImageUrl: CodecTypes['pg/text@1']['input'] | null;
-      readonly itemName: CodecTypes['pg/text@1']['input'] | null;
+      readonly itemName: CodecTypes['pg/text@1']['input'];
       readonly itemUrl: CodecTypes['pg/text@1']['input'] | null;
       readonly quantity: CodecTypes['pg/int4@1']['input'];
       readonly reference: CodecTypes['pg/int4@1']['input'];
@@ -1529,7 +1529,7 @@ export namespace Models {
     customerAddress: CodecTypes['pg/text@1']['output'] | null;
     customerCity: CodecTypes['pg/text@1']['output'] | null;
     contactChannel: CodecTypes['pg/text@1']['output'] | null;
-    itemName: CodecTypes['pg/text@1']['output'] | null;
+    itemName: CodecTypes['pg/text@1']['output'];
     itemUrl: CodecTypes['pg/text@1']['output'] | null;
     itemImageUrl: CodecTypes['pg/text@1']['output'] | null;
     quantity: CodecTypes['pg/int4@1']['output'];
@@ -2946,7 +2946,7 @@ type ContractBase = Omit<
                 readonly itemName: {
                   readonly nativeType: 'text';
                   readonly codecId: 'pg/text@1';
-                  readonly nullable: true;
+                  readonly nullable: false;
                 };
                 readonly itemUrl: {
                   readonly nativeType: 'text';
@@ -4746,7 +4746,7 @@ type ContractBase = Omit<
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
               readonly itemName: {
-                readonly nullable: true;
+                readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
               };
               readonly itemUrl: {

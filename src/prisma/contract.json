@@ -56,6 +56,14 @@
       "model": "ShipmentEvent",
       "namespace": "public"
     },
+    "shipmentItem": {
+      "model": "ShipmentItem",
+      "namespace": "public"
+    },
+    "shipmentSubscriber": {
+      "model": "ShipmentSubscriber",
+      "namespace": "public"
+    },
     "supportStatus": {
       "model": "SupportStatus",
       "namespace": "public"
@@ -2171,7 +2179,7 @@
                 }
               },
               "itemName": {
-                "nullable": false,
+                "nullable": true,
                 "type": {
                   "codecId": "pg/text@1",
                   "kind": "scalar"
@@ -2239,6 +2247,36 @@
                 },
                 "to": {
                   "model": "ShipmentEvent",
+                  "namespace": "public"
+                }
+              },
+              "items": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "shipmentId"
+                  ]
+                },
+                "to": {
+                  "model": "ShipmentItem",
+                  "namespace": "public"
+                }
+              },
+              "subscribers": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "shipmentId"
+                  ]
+                },
+                "to": {
+                  "model": "ShipmentSubscriber",
                   "namespace": "public"
                 }
               }
@@ -2323,6 +2361,13 @@
                   "kind": "scalar"
                 }
               },
+              "itemId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "note": {
                 "nullable": false,
                 "type": {
@@ -2352,6 +2397,22 @@
               }
             },
             "relations": {
+              "item": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "itemId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "ShipmentItem",
+                  "namespace": "public"
+                }
+              },
               "shipment": {
                 "cardinality": "N:1",
                 "nullable": false,
@@ -2377,6 +2438,9 @@
                 "id": {
                   "column": "id"
                 },
+                "itemId": {
+                  "column": "itemId"
+                },
                 "note": {
                   "column": "note"
                 },
@@ -2389,6 +2453,323 @@
               },
               "namespaceId": "public",
               "table": "shipmentEvent"
+            }
+          },
+          "ShipmentItem": {
+            "fields": {
+              "carrier": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "estimatedArrival": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "imageUrl": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "name": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "position": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "quantity": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "shipmentId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "ShipmentStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "trackingNumber": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "url": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "events": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "itemId"
+                  ]
+                },
+                "to": {
+                  "model": "ShipmentEvent",
+                  "namespace": "public"
+                }
+              },
+              "shipment": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "shipmentId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Shipment",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "carrier": {
+                  "column": "carrier"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "estimatedArrival": {
+                  "column": "estimatedArrival"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "imageUrl": {
+                  "column": "imageUrl"
+                },
+                "name": {
+                  "column": "name"
+                },
+                "position": {
+                  "column": "position"
+                },
+                "quantity": {
+                  "column": "quantity"
+                },
+                "shipmentId": {
+                  "column": "shipmentId"
+                },
+                "status": {
+                  "column": "status"
+                },
+                "trackingNumber": {
+                  "column": "trackingNumber"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                },
+                "url": {
+                  "column": "url"
+                }
+              },
+              "namespaceId": "public",
+              "table": "shipmentItem"
+            }
+          },
+          "ShipmentSubscriber": {
+            "fields": {
+              "codeAttempts": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "codeExpiresAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "codeHash": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "email": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastCodeSentAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "locale": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "shipmentId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "unsubscribeToken": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "verifiedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "shipment": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "shipmentId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Shipment",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "codeAttempts": {
+                  "column": "codeAttempts"
+                },
+                "codeExpiresAt": {
+                  "column": "codeExpiresAt"
+                },
+                "codeHash": {
+                  "column": "codeHash"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "email": {
+                  "column": "email"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "lastCodeSentAt": {
+                  "column": "lastCodeSentAt"
+                },
+                "locale": {
+                  "column": "locale"
+                },
+                "shipmentId": {
+                  "column": "shipmentId"
+                },
+                "unsubscribeToken": {
+                  "column": "unsubscribeToken"
+                },
+                "verifiedAt": {
+                  "column": "verifiedAt"
+                }
+              },
+              "namespaceId": "public",
+              "table": "shipmentSubscriber"
             }
           },
           "SupportStatus": {
@@ -4403,7 +4784,7 @@
                 "itemName": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
-                  "nullable": false
+                  "nullable": true
                 },
                 "itemUrl": {
                   "codecId": "pg/text@1",
@@ -4518,6 +4899,11 @@
                   "nativeType": "text",
                   "nullable": false
                 },
+                "itemId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
                 "note": {
                   "codecId": "pg/text@1",
                   "default": {
@@ -4561,9 +4947,34 @@
                     "namespaceId": "public",
                     "tableName": "shipment"
                   }
+                },
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "itemId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "shipmentEvent"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "shipmentItem"
+                  }
                 }
               ],
               "indexes": [
+                {
+                  "columns": [
+                    "itemId"
+                  ],
+                  "name": "shipmentEvent_itemId_idx_41357140",
+                  "prefix": "shipmentEvent_itemId_idx",
+                  "unique": false
+                },
                 {
                   "columns": [
                     "shipmentId",
@@ -4588,6 +4999,275 @@
                 ]
               },
               "uniques": []
+            },
+            "shipmentItem": {
+              "checks": [
+                {
+                  "expression": "\"status\" IN ('RECEIVED', 'PAID', 'ORDERED', 'SHIPPED', 'IN_TRANSIT', 'IN_TUNISIA', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED')",
+                  "name": "shipmentItem_status_check_cf7dc5f6",
+                  "prefix": "shipmentItem_status_check"
+                },
+                {
+                  "expression": "\"quantity\" BETWEEN 1 AND 99",
+                  "name": "shipment_item_quantity_range_594635fc",
+                  "prefix": "shipment_item_quantity_range"
+                }
+              ],
+              "columns": {
+                "carrier": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "estimatedArrival": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "imageUrl": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "name": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "position": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "quantity": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 1
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "shipmentId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "status": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "RECEIVED"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "ShipmentStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "trackingNumber": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "url": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "shipmentId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "shipmentItem"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "shipment"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "shipmentId"
+                  ],
+                  "name": "shipmentItem_shipmentId_idx_e3606ec1",
+                  "prefix": "shipmentItem_shipmentId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "shipmentId",
+                    "position"
+                  ],
+                  "name": "shipmentItem_shipmentId_position_idx_7fa32950",
+                  "prefix": "shipmentItem_shipmentId_position_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "shipmentSubscriber": {
+              "columns": {
+                "codeAttempts": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "codeExpiresAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "codeHash": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "email": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "lastCodeSentAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "locale": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "en"
+                  },
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "shipmentId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "unsubscribeToken": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "verifiedAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "shipmentId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "shipmentSubscriber"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "shipment"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "shipmentId"
+                  ],
+                  "name": "shipmentSubscriber_shipmentId_idx_e3606ec1",
+                  "prefix": "shipmentSubscriber_shipmentId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "unsubscribeToken"
+                  ]
+                },
+                {
+                  "columns": [
+                    "shipmentId",
+                    "email"
+                  ]
+                }
+              ]
             },
             "supportStatus": {
               "checks": [
@@ -4847,10 +5527,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "11b6da80387686fd8551d14c20569a328a8bb7e40dd033d704c78c01ee9b819b"
+    "storageHash": "61562973154ae20b9e06e39d16a36a657e1c87d2aa92019ddd6b3a2d995ecf8d"
   },
   "execution": {
-    "executionHash": "6a16b8ff9f9533b7d48194eeb95ffffc7508d3c2a6416861ee41e024191c50f9",
+    "executionHash": "42a13e7e80e40dfb70cde6d78096999f57a9fe555cccad965785e499b3108665",
     "mutations": {
       "defaults": [
         {
@@ -4972,6 +5652,28 @@
             "column": "id",
             "namespace": "public",
             "table": "shipmentEvent"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "shipmentItem"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "shipmentSubscriber"
           }
         }
       ]

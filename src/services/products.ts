@@ -6,8 +6,7 @@ import { CategoryRepository } from "../prisma/categories";
 import { UserError } from "../lib/result";
 import { parseDinars } from "../lib/money";
 import { slugify } from "../lib/slug";
-import { sniffImageType } from "../lib/image-type";
-import { cloudinaryConfigured, uploadPublicImage } from "../lib/cloudinary";
+import { uploadShopPhoto } from "./uploads";
 
 // What the admin form submits — everything as text, exactly as typed.
 export type ProductFormInput = {
@@ -199,19 +198,7 @@ export const ProductService = {
   },
 
   // Admin: a product or variant photo, uploaded to Cloudinary. Returns its public address.
-  uploadImage: async (bytes: Uint8Array) => {
-    if (!cloudinaryConfigured()) throw new UserError("Photo upload needs Cloudinary: add the CLOUDINARY_* settings to .env and restart.");
-    if (bytes.length === 0) throw new UserError("That file is empty.");
-    if (bytes.length > 6 * 1024 * 1024) throw new UserError("That photo is too large (6 MB maximum).");
-    if (!sniffImageType(bytes)) throw new UserError("Upload a JPG, PNG or WebP photo.");
-
-    try {
-      return { url: await uploadPublicImage(Buffer.from(bytes), "dario-store/products") };
-    } catch (error) {
-      console.error("[products] Cloudinary upload failed:", error);
-      throw new UserError("The upload failed. Check the Cloudinary settings and try again.");
-    }
-  },
+  uploadImage: async (bytes: Uint8Array) => await uploadShopPhoto(bytes, "dario-store/products"),
 
   // Past orders keep their own copy of the name and price, so deleting is safe.
   remove: async (id: string) => {

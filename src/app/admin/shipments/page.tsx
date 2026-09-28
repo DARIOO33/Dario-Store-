@@ -69,7 +69,7 @@ export default async function AdminShipmentsPage({ searchParams }: { searchParam
                 <div>
                   <strong className="orderNo">Nº {shipment.reference}</strong>
                   <p className="muted">
-                    {shipment.customerName} · {shipment.itemName}
+                    {shipment.customerName} · {shipment.items.length > 1 ? `${shipment.items[0]!.name} + ${shipment.items.length - 1} more` : (shipment.items[0]?.name ?? "—")}
                     {shipment.contactChannel ? ` · ${shipment.contactChannel}` : ""}
                   </p>
                 </div>

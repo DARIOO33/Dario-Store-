@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ShipmentForm from "@/src/components/admin/ShipmentForm";
+import { cloudinaryConfigured } from "@/src/lib/cloudinary";
 import { requirePageRole } from "@/src/lib/guards";
 import { TEAM } from "@/src/lib/roles";
 
@@ -21,21 +22,8 @@ export default async function NewShipmentPage() {
       </header>
       <div className="panel formPanel">
         <ShipmentForm
-          initial={{
-            customerName: "",
-            customerPhone: "",
-            customerCity: "",
-            customerAddress: "",
-            contactChannel: "",
-            itemName: "",
-            itemUrl: "",
-            itemImageUrl: "",
-            quantity: "1",
-            carrier: "",
-            carrierTrackingNumber: "",
-            estimatedArrival: "",
-            adminNotes: "",
-          }}
+          canUpload={cloudinaryConfigured()}
+          initial={{ customerName: "", customerPhone: "", customerCity: "", customerAddress: "", contactChannel: "", adminNotes: "", items: [] }}
         />
       </div>
     </>

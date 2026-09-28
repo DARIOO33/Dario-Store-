@@ -71,6 +71,7 @@ export const legalFr: LegalTexts = {
           "Les chats de commande et leurs photos sont stockés chiffrés. Les photos du chat sont des fichiers privés que seuls vous et notre équipe pouvez ouvrir.",
           "Les messages marqués comme contenant des identifiants restent masqués jusqu'à leur ouverture et sont effacés automatiquement après {days} jours ; chacun peut les effacer plus tôt.",
           "Les pages publiques de suivi AliExpress n'affichent votre nom, téléphone et adresse que partiellement (masqués).",
+          "Si vous activez les mises à jour par e-mail sur une page de suivi, nous gardons cette adresse (confirmée par un code) uniquement pour vous envoyer les nouvelles de cette commande. Chaque e-mail contient un lien pour les arrêter, qui supprime l'adresse.",
         ],
       },
       {

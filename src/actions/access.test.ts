@@ -28,6 +28,7 @@ vi.mock("../services/shipments", () => ({ ShipmentService: fakeService("Shipment
 vi.mock("../services/orders", () => ({ OrderService: fakeService("OrderService") }));
 vi.mock("../services/messages", () => ({ MessageService: fakeService("MessageService") }));
 vi.mock("../services/catalog", () => ({ CatalogService: fakeService("CatalogService") }));
+vi.mock("../services/shipment-notifications", () => ({ ShipmentNotifications: fakeService("ShipmentNotifications") }));
 
 import * as availability from "./availability";
 import * as categories from "./categories";
@@ -36,6 +37,7 @@ import * as reviews from "./reviews";
 import * as shipments from "./shipments";
 import * as orders from "./orders";
 import * as messages from "./messages";
+import * as tracking from "./tracking";
 
 const guest = null;
 const member = { id: "user-1", name: "Sami", role: "MEMBER" };
@@ -71,7 +73,8 @@ const ADMIN_ACTIONS: [string, () => Promise<unknown>][] = [
 const TEAM_ACTIONS: [string, () => Promise<unknown>][] = [
   ["createShipmentAction", () => shipments.createShipmentAction({} as never)],
   ["updateShipmentAction", () => shipments.updateShipmentAction("s-1", {} as never)],
-  ["addShipmentUpdateAction", () => shipments.addShipmentUpdateAction("s-1", "SHIPPED", "")],
+  ["addShipmentUpdateAction", () => shipments.addShipmentUpdateAction("s-1", ["item-1"], "SHIPPED", "")],
+  ["uploadShipmentImageAction", () => shipments.uploadShipmentImageAction(form())],
   ["removeShipmentEventAction", () => shipments.removeShipmentEventAction("s-1", "e-1")],
   ["deleteShipmentAction", () => shipments.deleteShipmentAction("s-1")],
   ["sendDeliveryEmailAction", () => orders.sendDeliveryEmailAction("o-1", "key: 123", true)],
@@ -88,7 +91,7 @@ beforeEach(() => {
 
 describe("admin-only server actions", () => {
   it("covers every team action exported from src/actions", () => {
-    expect(ADMIN_ACTIONS.length + TEAM_ACTIONS.length).toBe(25);
+    expect(ADMIN_ACTIONS.length + TEAM_ACTIONS.length).toBe(26);
   });
 
   it.each(ADMIN_ACTIONS)("%s refuses guests, customers and staff without touching any service", async (_name, call) => {
@@ -193,5 +196,15 @@ describe("an account whose email is no longer verified", () => {
 
     await messages.openChatAction("o-1", false);
     expect(spy).toHaveBeenCalledWith("o-1", null, false);
+  });
+});
+
+describe("tracking email updates (public on purpose: no login on a tracking page)", () => {
+  it("work for a guest and go straight to the service, which checks and limits them", async () => {
+    session.user = null;
+    await expect(tracking.requestTrackingAlertsCodeAction("DS-7K4Q9-X2M3F", "zz-sami@example.tn")).resolves.toMatchObject({ ok: true });
+    await expect(tracking.verifyTrackingAlertsAction("DS-7K4Q9-X2M3F", "zz-sami@example.tn", "123456")).resolves.toMatchObject({ ok: true });
+    await expect(tracking.stopTrackingAlertsAction("a".repeat(48))).resolves.toMatchObject({ ok: true });
+    expect(spies.calls).toEqual(["ShipmentNotifications.requestCode", "ShipmentNotifications.verifyCode", "ShipmentNotifications.unsubscribe"]);
   });
 });

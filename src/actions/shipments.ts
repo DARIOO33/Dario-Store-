@@ -6,7 +6,7 @@
 import { revalidatePath } from "next/cache";
 import { requireRole } from "../lib/session";
 import { TEAM } from "../lib/roles";
-import { safely } from "../lib/result";
+import { safely, UserError } from "../lib/result";
 import { ShipmentService, type ShipmentFormInput } from "../services/shipments";
 
 function refresh(id?: string) {
@@ -34,11 +34,13 @@ export async function updateShipmentAction(id: string, input: ShipmentFormInput)
   });
 }
 
-export async function addShipmentUpdateAction(id: string, status: string, note: string) {
+// Moves the chosen items to a stage (or adds a note); choosing every item updates the whole order.
+export async function addShipmentUpdateAction(id: string, itemIds: string[], status: string, note: string) {
   await requireRole(...TEAM);
 
   return await safely(async () => {
-    await ShipmentService.addUpdate(String(id), String(status), String(note ?? ""));
+    const ids = Array.isArray(itemIds) ? itemIds.map(String) : [];
+    await ShipmentService.addUpdate(String(id), ids, String(status), String(note ?? ""));
     refresh(String(id));
     revalidatePath("/track", "layout");
   });
@@ -60,5 +62,16 @@ export async function deleteShipmentAction(id: string) {
   return await safely(async () => {
     await ShipmentService.remove(String(id));
     refresh();
+  });
+}
+
+// A photo for a shipment item, uploaded instead of pasting a link. The form carries it in `image`.
+export async function uploadShipmentImageAction(form: FormData) {
+  await requireRole(...TEAM);
+
+  return await safely(async () => {
+    const file = form.get("image");
+    if (!(file instanceof File)) throw new UserError("Choose a photo to upload.");
+    return await ShipmentService.uploadImage(new Uint8Array(await file.arrayBuffer()));
   });
 }
