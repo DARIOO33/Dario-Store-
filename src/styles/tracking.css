@@ -250,6 +250,39 @@
   .trackLayout {
     grid-template-columns: 1fr;
   }
+
+  /* Phones: the "Get email updates" box moves up, right under the status title, instead of coming
+     after every item and the delivery details. The page becomes one column whose order is set here. */
+  .trackPage {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .trackPage .trackLayout,
+  .trackPage .trackSide {
+    display: contents;
+  }
+
+  .trackPage > *,
+  .trackPage .trackLayout > *,
+  .trackPage .trackSide > * {
+    order: 2;
+  }
+
+  .trackPage > .pageHead {
+    order: 0;
+  }
+
+  .trackPage .trackAlerts {
+    order: 1;
+    margin-bottom: 1.5rem;
+  }
+
+  /* The spacing the two-column grid used to give the panels. */
+  .trackPage .trackLayout > .panel,
+  .trackPage .trackSide > .panel:not(.trackAlerts) {
+    margin-bottom: 1.2rem;
+  }
 }
 
 /* Several items on one tracking page: each with its own photo, stage, parcel number and date. */

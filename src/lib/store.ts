@@ -8,9 +8,9 @@ export function siteUrl() {
 }
 
 // How customers reach the shop (footer, legal pages). Leave a value empty to hide it.
-// Meta (Facebook) Pixel for ads: vibestoretn1's Pixel. Loaded only by production builds (see app/layout.tsx);
+// Meta (Facebook) Pixel for ads (replaced the first pixel, 1231199037661013, on 2026-09-28). Loaded only by production builds (see app/layout.tsx);
 // events are sent from lib/meta-pixel.ts. Leave empty to switch it off.
-export const META_PIXEL_ID = "1231199037661013";
+export const META_PIXEL_ID = "1102753785554679";
 
 export const CONTACT = {
   instagram: "dario.store.tn",

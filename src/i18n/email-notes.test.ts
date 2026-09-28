@@ -4,7 +4,7 @@ import { fr } from "./messages/fr";
 
 // Every screen that tells the customer "we sent you an email" also says it may be in the spam folder.
 describe("'check your spam' notes", () => {
-  const sentToCustomer = (m: typeof en) => [m.order.thanksText, m.auth.sentCode, m.auth.notVerified, m.auth.sentNewCode, m.chatSystem.deliveredEmail, m.tracking.alertsCodeSent];
+  const sentToCustomer = (m: typeof en) => [m.order.thanksText, m.auth.sentCode, m.auth.notVerified, m.auth.sentNewCode, m.chatSystem.deliveredEmail, m.tracking.alertsCodeSent, m.tracking.alertsOn];
 
   it("are in every English text", () => {
     for (const text of sentToCustomer(en)) expect(text).toMatch(/spam/i);

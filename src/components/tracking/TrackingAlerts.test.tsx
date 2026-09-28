@@ -34,7 +34,7 @@ describe("TrackingAlerts", () => {
     fireEvent.change(screen.getByLabelText(en.tracking.alertsCode), { target: { value: "12 34 56" } });
     fireEvent.click(screen.getByRole("button", { name: en.tracking.alertsVerify }));
 
-    await screen.findByText("Email updates are on for zz-sami@example.tn. You'll get an email at every change.");
+    await screen.findByText(/Email updates are on for zz-sami@example\.tn\. We just sent you a confirmation email.*Check your spam or junk folder\./);
     expect(verify).toHaveBeenCalledWith("DS-7K4Q9-X2M3F", "zz-sami@example.tn", "123456");
   });
 

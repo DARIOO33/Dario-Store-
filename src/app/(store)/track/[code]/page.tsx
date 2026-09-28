@@ -30,7 +30,7 @@ export default async function TrackingPage({ params }: { params: Promise<{ code:
   const several = shipment.items.length > 1;
 
   return (
-    <div className="wrap pageTop">
+    <div className="wrap pageTop trackPage">
       <header className="pageHead">
         <span className="eyebrow">
           {t("tracking.eyebrow", { reference: shipment.reference, code: shipment.trackingCode })}

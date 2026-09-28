@@ -8,7 +8,7 @@ import { sendEmail } from "../lib/email";
 import { runAfterResponse } from "../lib/background";
 import { siteUrl } from "../lib/store";
 import { normalizeTrackingCode, type ShipmentStatus } from "../lib/shipments";
-import { trackingCodeEmail, trackingUpdateEmail } from "../lib/email-templates";
+import { trackingCodeEmail, trackingSubscribedEmail, trackingUpdateEmail } from "../lib/email-templates";
 import { createTranslator } from "../i18n/translate";
 import { toLocale, type Locale } from "../i18n/config";
 
@@ -99,6 +99,21 @@ export const ShipmentNotifications = {
     }
 
     await ShipmentRepository.updateSubscriber(subscriber.id, { verifiedAt: now(), codeHash: null, codeExpiresAt: null, codeAttempts: 0 });
+
+    // A first email right away: if it arrives, the customer knows the updates will reach them too.
+    const locale = toLocale(subscriber.locale);
+    runAfterResponse(() =>
+      sendEmail({
+        to: subscriber.email,
+        ...trackingSubscribedEmail({
+          locale,
+          reference: shipment.reference,
+          statusLabel: createTranslator(locale).messages.shipmentStatus[shipment.status].label,
+          trackingUrl: `${siteUrl()}/track/${shipment.trackingCode}`,
+          unsubscribeUrl: `${siteUrl()}/track/unsubscribe?token=${subscriber.unsubscribeToken}`,
+        }),
+      }),
+    );
   },
 
   // The unsubscribe page: which order a link is for (shown before the "Stop" button), then stopping.

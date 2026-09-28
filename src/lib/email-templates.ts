@@ -261,3 +261,19 @@ export function trackingUpdateEmail(data: {
     text: [subject, intro, ...names.map((name) => `- ${name}: ${data.statusLabel}`), data.note ? `${t("email.trackingNote")} ${data.note}` : "", `${t("email.trackingFollow")}: ${data.trackingUrl}`, `${t("email.trackingStop")}: ${data.unsubscribeUrl}`].filter(Boolean).join("\n\n"),
   };
 }
+
+// Sent once the code is confirmed: proof that the updates will reach this inbox.
+export function trackingSubscribedEmail(data: { locale: Locale; reference: number; statusLabel: string; trackingUrl: string; unsubscribeUrl: string }): Email {
+  const t = createTranslator(data.locale);
+  const subject = t("email.trackingOnSubject", { reference: data.reference });
+  const intro = t("email.trackingOnIntro", { reference: data.reference });
+  const body = `${paragraph(t("email.trackingOnText"))}
+    <p style="margin:0;padding:12px 14px;background:${PAPER};border:2px solid ${INK};"><strong>${escape(t("email.trackingOnNow"))}</strong> ${escape(data.statusLabel)}</p>`;
+  const stop = `<p style="margin:22px 0 0;font-size:12px;color:#847a68;">${escape(t("email.trackingWhy", { reference: data.reference }))} <a href="${escape(data.unsubscribeUrl)}" style="color:#847a68;">${escape(t("email.trackingStop"))}</a></p>`;
+
+  return {
+    subject,
+    html: frame({ t, footer: t("email.trackingFooter", { store: STORE_NAME }), kicker: t("email.trackingKicker"), title: t("email.trackingOnTitle"), intro, body, button: { label: t("email.trackingFollow"), url: data.trackingUrl }, after: stop }),
+    text: [subject, intro, t("email.trackingOnText"), `${t("email.trackingOnNow")} ${data.statusLabel}`, `${t("email.trackingFollow")}: ${data.trackingUrl}`, `${t("email.trackingStop")}: ${data.unsubscribeUrl}`].join("\n\n"),
+  };
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adminNewOrderEmail, deliveryEmail, orderReceivedEmail, trackingCodeEmail, trackingUpdateEmail } from "./email-templates";
+import { adminNewOrderEmail, deliveryEmail, orderReceivedEmail, trackingCodeEmail, trackingSubscribedEmail, trackingUpdateEmail } from "./email-templates";
 
 // A customer controls their name, the order notes and (for the admin) item names in emails:
 // nothing they type may turn into HTML or a working link in a mail client.
@@ -45,5 +45,16 @@ describe("tracking emails", () => {
     expect(email.html).toContain("Tous vos articles");
     expect(email.html).toContain('href="https://shop.tn/track/unsubscribe?token=abc"');
     expect(email.text).toContain("Ne plus recevoir ces e-mails: https://shop.tn/track/unsubscribe?token=abc");
+  });
+});
+
+describe("tracking success email", () => {
+  it("says updates are on, shows where the order is, and carries the stop link", () => {
+    const email = trackingSubscribedEmail({ locale: "en", reference: 12, statusLabel: "Arrived in Tunisia", trackingUrl: "https://shop.tn/track/DS-7K4Q9-X2M3F", unsubscribeUrl: "https://shop.tn/track/unsubscribe?token=abc" });
+    expect(email.subject).toBe("Tracking updates are on for order Nº 12");
+    expect(email.html).toContain("Arrived in Tunisia");
+    expect(email.html).toContain('href="https://shop.tn/track/DS-7K4Q9-X2M3F"');
+    expect(email.html).toContain('href="https://shop.tn/track/unsubscribe?token=abc"');
+    expect(email.text).toContain("add us to your contacts");
   });
 });

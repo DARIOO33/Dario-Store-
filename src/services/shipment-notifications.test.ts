@@ -19,7 +19,7 @@ const repo = vi.mocked(ShipmentRepository);
 const send = vi.mocked(sendEmail);
 const minutesAgo = (n: number) => Temporal.Now.instant().subtract({ minutes: n });
 
-const shipment = { id: "s-1", reference: 12, trackingCode: "DS-7K4Q9-X2M3F", items: [], events: [] } as never;
+const shipment = { id: "s-1", reference: 12, trackingCode: "DS-7K4Q9-X2M3F", status: "SHIPPED", items: [], events: [] } as never;
 const subscriber = (changes: Record<string, unknown> = {}) =>
   ({ id: "sub-1", shipmentId: "s-1", email: "zz-sami@example.tn", locale: "en", verifiedAt: null, codeHash: null, codeExpiresAt: null, codeAttempts: 0, lastCodeSentAt: null, unsubscribeToken: "a".repeat(48), ...changes }) as never;
 const hashOf = (code: string) => createHash("sha256").update(`sub-1:${code}`).digest("hex");
@@ -86,6 +86,26 @@ describe("turning on email updates: checking the code", () => {
     repo.findSubscriber.mockResolvedValue(waiting());
     await ShipmentNotifications.verifyCode("DS-7K4Q9-X2M3F", "zz-sami@example.tn", " 123456 ");
     expect(repo.updateSubscriber).toHaveBeenCalledWith("sub-1", expect.objectContaining({ verifiedAt: expect.any(Temporal.Instant), codeHash: null }));
+  });
+
+  it("then sends a success email, in the subscriber's language, with the stop link", async () => {
+    repo.findSubscriber.mockResolvedValue(waiting({ locale: "fr" }));
+    await ShipmentNotifications.verifyCode("DS-7K4Q9-X2M3F", "zz-sami@example.tn", "123456");
+
+    expect(send).toHaveBeenCalledOnce();
+    const email = send.mock.calls[0]![0];
+    expect(email).toMatchObject({ to: "zz-sami@example.tn", subject: "Le suivi par e-mail est activé pour la commande Nº 12" });
+    expect(email.text).toContain(`/track/unsubscribe?token=${"a".repeat(48)}`);
+    expect(email.text).toContain("/track/DS-7K4Q9-X2M3F");
+  });
+
+  it("sends no success email for a wrong code, or when the address was already confirmed", async () => {
+    repo.findSubscriber.mockResolvedValue(waiting());
+    await expect(ShipmentNotifications.verifyCode("DS-7K4Q9-X2M3F", "zz-sami@example.tn", "000000")).rejects.toBeTruthy();
+
+    repo.findSubscriber.mockResolvedValue(subscriber({ verifiedAt: minutesAgo(3) }));
+    await ShipmentNotifications.verifyCode("DS-7K4Q9-X2M3F", "zz-sami@example.tn", "123456");
+    expect(send).not.toHaveBeenCalled();
   });
 
   it("counts a wrong code and refuses it", async () => {
