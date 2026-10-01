@@ -38,6 +38,16 @@ export const legalEn: LegalTexts = {
         ],
       },
       {
+        id: "aliexpress-picks",
+        heading: "AliExpress Picks",
+        paragraphs: [
+          "AliExpress Picks are products we order from AliExpress on your behalf. They are paid in full in advance (the price already includes shipping), need an account, and are ordered separately from our other products. By ticking the box at checkout you accept these terms.",
+          "We place your order with AliExpress once your payment is confirmed. Delivery usually takes 15 to 30 days; this is AliExpress's estimate and can sometimes be longer. You follow each parcel on your tracking page, and can get email updates.",
+          "Customs fees are not included: you pay them on delivery. They start from 4 DT per parcel and depend on the product. Several items can arrive in separate parcels, each with its own fees.",
+          "Damaged parcel: record a video while opening it, from the sealed package until the item is out. Send it to us in the order chat. Without this unboxing video we cannot refund a damaged item.",
+        ],
+      },
+      {
         heading: "Your account",
         paragraphs: [
           "Keep your login details private. Orders placed from your account are considered placed by you.",

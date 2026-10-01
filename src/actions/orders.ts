@@ -23,6 +23,7 @@ export type PlaceOrderInput = {
   notes: string;
   paymentMethod: string;
   cryptoNetwork: string;
+  acceptedPickTerms?: boolean;
 };
 
 // Physical-only orders can be placed as a guest (they get a secret order
@@ -55,6 +56,7 @@ export async function placeOrderAction(input: PlaceOrderInput) {
       notes: String(input.notes ?? ""),
       paymentMethod: String(input.paymentMethod ?? ""),
       cryptoNetwork: String(input.cryptoNetwork ?? ""),
+      acceptedPickTerms: input.acceptedPickTerms === true,
       userId: user?.id ?? null,
       locale,
     });

@@ -84,6 +84,11 @@ npm run seed:store     # demo catalogue
   **Pending:** the old single-item columns on `Shipment` (`itemName`, `itemUrl`, `itemImageUrl`, `quantity`, `carrier`,
   `carrierTrackingNumber`, `estimatedArrival`) are unused since 2026-09-28; drop them from the contract (and run
   `db:update`) only after this code is live on Vercel. Backup: `~/Documents/dev/membership-backups/`.
+- AliExpress Picks (`Product.aliexpressPick`, `offerEndsAt`): prepaid with an account, never mixed with other products,
+  no shipping fee, terms ticked at checkout (`Order.termsAcceptedAt`), expired offers can't be bought and leave shop lists
+  (`offersOpenAt` filter). Paid pick order -> "Create tracking" (`ShipmentService.createFromOrder`, `Shipment.orderId`)
+  posts the link in the chat; the order follows the tracking (Shipped/Delivered); its chat can't close before delivery.
+  Full terms: `/terms#aliexpress-picks` (`i18n/legal`). Demo picks: `npm run seed:store`.
 - Reviews: masking the reviewer's name happens in `ReviewService.submit` before saving; keep product rating totals
   in sync through `refreshRating` whenever a review is created, edited, hidden or deleted.
 

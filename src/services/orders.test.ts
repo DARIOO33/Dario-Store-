@@ -429,3 +429,40 @@ describe("admin payment tools", () => {
     expect(notifications.deliverByEmail).not.toHaveBeenCalled();
   });
 });
+
+describe("placing an order of AliExpress picks", () => {
+  const earbuds = product({ id: "pick", name: "Earbuds ANC", aliexpressPick: true, offerEndsAt: Temporal.Now.instant().add({ hours: 48 }), stock: null, priceMillimes: 59_000 });
+  const pickOrder = (changes: Partial<CheckoutInput> = {}) =>
+    checkout({ items: [{ productId: "pick", quantity: 1 }], userId: customer.id, paymentMethod: "D17", acceptedPickTerms: true, ...changes });
+
+  beforeEach(() => products.findByIds.mockResolvedValue([product(), netflix, earbuds]));
+
+  it("is prepaid, has no shipping fee and records when the terms were accepted", async () => {
+    await OrderService.place(pickOrder());
+    expect(state.createdOrders[0]).toMatchObject({ aliexpressPick: true, paymentMethod: "D17", shippingMillimes: 0, totalMillimes: 59_000, termsAcceptedAt: expect.any(Temporal.Instant) });
+  });
+
+  it("can't be mixed with other products", async () => {
+    await expect(OrderService.place(pickOrder({ items: [{ productId: "pick", quantity: 1 }, { productId: "iem", quantity: 1 }] }))).rejects.toMatchObject({ key: "errors.picksSeparate" });
+    await expect(OrderService.place(pickOrder({ items: [{ productId: "pick", quantity: 1 }, { productId: "netflix", quantity: 1 }] }))).rejects.toMatchObject({ key: "errors.picksSeparate" });
+    expect(state.createdOrders).toHaveLength(0);
+  });
+
+  it("needs an account, an online payment method and the accepted terms", async () => {
+    await expect(OrderService.place(pickOrder({ userId: null }))).rejects.toMatchObject({ key: "errors.loginForPicks" });
+    await expect(OrderService.place(pickOrder({ paymentMethod: "CASH_ON_DELIVERY" }))).rejects.toMatchObject({ key: "errors.choosePayment" });
+    await expect(OrderService.place(pickOrder({ acceptedPickTerms: false }))).rejects.toMatchObject({ key: "errors.picksTerms" });
+    await expect(OrderService.place(pickOrder({ acceptedPickTerms: undefined }))).rejects.toMatchObject({ key: "errors.picksTerms" });
+    expect(state.createdOrders).toHaveLength(0);
+  });
+
+  it("can't be bought once the offer has ended", async () => {
+    products.findByIds.mockResolvedValue([product({ id: "pick", aliexpressPick: true, offerEndsAt: Temporal.Now.instant().subtract({ minutes: 1 }), stock: null })]);
+    await expect(OrderService.place(pickOrder())).rejects.toMatchObject({ key: "errors.offerEnded" });
+  });
+
+  it("doesn't change normal orders (no terms needed, shipping still charged)", async () => {
+    await OrderService.place(checkout());
+    expect(state.createdOrders[0]).toMatchObject({ aliexpressPick: false, termsAcceptedAt: null, shippingMillimes: 7_000 });
+  });
+});

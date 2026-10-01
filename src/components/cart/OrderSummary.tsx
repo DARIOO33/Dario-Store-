@@ -17,14 +17,14 @@ type Props = {
 // "Place order" button (which submits the checkout form by its id).
 export default function OrderSummary({ totals, submitting, disabled, needsLogin, needsPayment, hasUnavailable }: Props) {
   const t = useT();
-  const { subtotal, physicalSubtotal, requiresShipping, shipping, total } = totals;
+  const { subtotal, physicalSubtotal, requiresShipping, shipping, total, hasPick, mixedPicks } = totals;
   const untilFree = FREE_SHIPPING_FROM_MILLIMES - physicalSubtotal;
 
   return (
     <div className="summary">
       <h2>{t("summary.title")}</h2>
 
-      {requiresShipping && (
+      {requiresShipping && !hasPick && (
         <div className="freeShip">
           {untilFree > 0 ? (
             <p>{t("summary.addForFree", { amount: formatMillimes(untilFree) })}</p>
@@ -46,7 +46,7 @@ export default function OrderSummary({ totals, submitting, disabled, needsLogin,
         </div>
         <div>
           <dt>{t("summary.shipping")}</dt>
-          <dd>{requiresShipping ? (shipping === 0 ? t("summary.free") : formatMillimes(shipping)) : t("summary.notNeeded")}</dd>
+          <dd>{hasPick ? t("summary.included") : requiresShipping ? (shipping === 0 ? t("summary.free") : formatMillimes(shipping)) : t("summary.notNeeded")}</dd>
         </div>
         <div className="grand">
           <dt>{t("summary.total")}</dt>
@@ -59,6 +59,7 @@ export default function OrderSummary({ totals, submitting, disabled, needsLogin,
         {submitting ? t("summary.placing") : needsLogin ? t("summary.logInToOrder") : t("summary.placeOrder", { total: formatMillimes(total) })}
       </button>
       {hasUnavailable && <p className="cartWarn" style={{ marginTop: "0.6rem" }}>{t("summary.removeUnavailable")}</p>}
+      {mixedPicks && <p className="cartWarn" style={{ marginTop: "0.6rem" }}>{t("summary.picksSeparate")}</p>}
       <p className="hint" style={{ marginTop: "0.8rem" }}>
         {t("summary.recheck")}
         {needsPayment ? t("summary.recheckChat") : ""} {t("summary.acceptTerms")}{" "}

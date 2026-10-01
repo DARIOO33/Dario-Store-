@@ -71,7 +71,7 @@ export default function OrderChat({ orderId, asAdmin }: { orderId: string; asAdm
           <p className="muted">{t("chat.private")}</p>
         </div>
         {/* A delivered order's chat stays open until the team closes it. */}
-        {asAdmin && chat.loaded && chat.closure !== "cancelled" && (
+        {asAdmin && chat.loaded && (chat.closure === "store" || chat.canClose) && (
           <button
             type="button"
             className="btn btnGhost"

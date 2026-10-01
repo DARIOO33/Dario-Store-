@@ -28,6 +28,7 @@ export default function CartView({ availability }: { availability: Availability 
   const { data: session, isPending: sessionPending } = authClient.useSession();
 
   const [edits, setEdits] = useState<Partial<CheckoutForm>>({});
+  const [acceptedPickTerms, setAcceptedPickTerms] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -49,9 +50,11 @@ export default function CartView({ availability }: { availability: Availability 
     setEdits((current) => ({ ...current, [key]: e.target.value }));
 
   const totals = summarize(rows);
-  const { usable, hasVirtual } = totals;
-  const needsLogin = hasVirtual && !sessionPending && !session;
-  const needsPayment = hasVirtual && !!session;
+  const { usable, hasVirtual, hasPick, mixedPicks } = totals;
+  // Digital products and AliExpress picks are paid online in advance, with an account.
+  const prepaid = hasVirtual || hasPick;
+  const needsLogin = prepaid && !sessionPending && !session;
+  const needsPayment = prepaid && !!session;
   const hasUnavailable = loaded && rows.some((row) => !row.available);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -67,6 +70,7 @@ export default function CartView({ availability }: { availability: Availability 
       const result = await placeOrderAction({
         items: usable.map((row) => ({ productId: row.line.productId, variantId: row.line.variantId, quantity: row.line.quantity })),
         ...form,
+        acceptedPickTerms: hasPick && acceptedPickTerms,
       });
 
       if (result.ok) {
@@ -124,7 +128,10 @@ export default function CartView({ availability }: { availability: Availability 
           signedIn={!!session}
           needsLogin={needsLogin}
           requiresShipping={totals.requiresShipping}
-          hasVirtual={hasVirtual}
+          hasVirtual={prepaid}
+          isPick={hasPick}
+          acceptedPickTerms={acceptedPickTerms}
+          onAcceptPickTerms={setAcceptedPickTerms}
           availability={availability}
         />
       </div>
@@ -133,7 +140,7 @@ export default function CartView({ availability }: { availability: Availability 
         <OrderSummary
           totals={totals}
           submitting={submitting}
-          disabled={submitting || usable.length === 0 || hasUnavailable || needsLogin || sessionPending}
+          disabled={submitting || usable.length === 0 || hasUnavailable || needsLogin || sessionPending || mixedPicks}
           needsLogin={needsLogin}
           needsPayment={needsPayment}
           hasUnavailable={hasUnavailable}

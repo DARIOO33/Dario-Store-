@@ -35,6 +35,8 @@ export type CheckoutInput = {
   userId: string | null;
   // The language the customer is browsing in: names in errors, and the emails we send.
   locale: Locale;
+  // The customer ticked "I have read the AliExpress Picks terms" (only asked for an order of picks).
+  acceptedPickTerms?: boolean;
 };
 
 type Viewer = { id: string; role: string } | null;
@@ -135,6 +137,10 @@ async function resolveLines(wanted: ReturnType<typeof mergeItems>, locale: Local
     if (!product || !product.active) {
       throw userError("errors.itemUnavailable");
     }
+    // A weekly AliExpress pick can't be bought once its offer is over.
+    if (product.offerEndsAt && Temporal.Instant.compare(product.offerEndsAt, now()) <= 0) {
+      throw userError("errors.offerEnded", { name: localized(locale, product.name, product.nameFr) });
+    }
 
     // A product with variants is bought as one of its variants — which then
     // carries the price and the stock.
@@ -159,15 +165,15 @@ async function resolveLines(wanted: ReturnType<typeof mergeItems>, locale: Local
   return lines;
 }
 
-// Digital orders are paid online and discussed with the store in a private
-// chat, so they need an account. Physical-only orders can stay guest and are
-// paid in cash on delivery.
-function resolvePayment(hasVirtual: boolean, input: CheckoutInput) {
+// Digital orders and AliExpress picks are paid online in advance and discussed with the store in a
+// private chat, so they need an account (the shop pays AliExpress by card before the customer gets
+// anything). Other physical orders can stay guest and are paid in cash on delivery.
+function resolvePayment(prepaid: boolean, isPick: boolean, input: CheckoutInput) {
   let paymentMethod: PaymentMethod = "CASH_ON_DELIVERY";
   let cryptoNetwork: string | null = null;
 
-  if (hasVirtual) {
-    if (!input.userId) throw userError("errors.loginForDigital");
+  if (prepaid) {
+    if (!input.userId) throw userError(isPick ? "errors.loginForPicks" : "errors.loginForDigital");
 
     const chosen = AVAILABLE_ONLINE_METHODS.find((method) => method === input.paymentMethod);
     if (!chosen) throw userError("errors.choosePayment");
@@ -261,7 +267,13 @@ export const OrderService = {
     const lines = await resolveLines(mergeItems(input.items), input.locale);
     const hasVirtual = lines.some((line) => line.product.type === "VIRTUAL");
     const requiresShipping = lines.some((line) => line.product.type === "PHYSICAL");
-    const { paymentMethod, cryptoNetwork } = resolvePayment(hasVirtual, input);
+
+    // AliExpress picks are an order of their own: prepaid, no shipping fee (it is in the price), and
+    // only once the customer has accepted their terms (15-30 days, customs, unboxing video).
+    const isPick = lines.some((line) => line.product.aliexpressPick);
+    if (isPick && lines.some((line) => !line.product.aliexpressPick)) throw userError("errors.picksSeparate");
+    const { paymentMethod, cryptoNetwork } = resolvePayment(hasVirtual || isPick, isPick, input);
+    if (isPick && input.acceptedPickTerms !== true) throw userError("errors.picksTerms");
 
     const address = input.address.trim();
     const city = input.city.trim();
@@ -272,7 +284,7 @@ export const OrderService = {
     }
 
     const subtotalMillimes = sum(lines);
-    const shippingMillimes = requiresShipping ? shippingFee(sum(lines.filter((line) => line.product.type === "PHYSICAL"))) : 0;
+    const shippingMillimes = requiresShipping && !isPick ? shippingFee(sum(lines.filter((line) => line.product.type === "PHYSICAL"))) : 0;
     const guestToken = input.userId ? null : randomBytes(16).toString("hex");
 
     const order = await db.transaction(async (tx) => {
@@ -295,6 +307,8 @@ export const OrderService = {
         shippingPostalCode: requiresShipping ? input.postalCode.trim() || null : null,
         notes: input.notes.trim() || null,
         locale: input.locale,
+        aliexpressPick: isPick,
+        termsAcceptedAt: isPick ? now() : null,
       });
 
       // Each item keeps its own copy of the name and price, so later edits

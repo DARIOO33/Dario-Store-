@@ -604,6 +604,13 @@
           },
           "Order": {
             "fields": {
+              "aliexpressPick": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "chatClosedAt": {
                 "nullable": true,
                 "type": {
@@ -818,6 +825,13 @@
                   "kind": "scalar"
                 }
               },
+              "termsAcceptedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
               "totalMillimes": {
                 "nullable": false,
                 "type": {
@@ -886,6 +900,22 @@
                   "namespace": "public"
                 }
               },
+              "shipment": {
+                "cardinality": "1:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "orderId"
+                  ]
+                },
+                "to": {
+                  "model": "Shipment",
+                  "namespace": "public"
+                }
+              },
               "user": {
                 "cardinality": "N:1",
                 "nullable": true,
@@ -905,6 +935,9 @@
             },
             "storage": {
               "fields": {
+                "aliexpressPick": {
+                  "column": "aliexpressPick"
+                },
                 "chatClosedAt": {
                   "column": "chatClosedAt"
                 },
@@ -988,6 +1021,9 @@
                 },
                 "subtotalMillimes": {
                   "column": "subtotalMillimes"
+                },
+                "termsAcceptedAt": {
+                  "column": "termsAcceptedAt"
                 },
                 "totalMillimes": {
                   "column": "totalMillimes"
@@ -1328,6 +1364,13 @@
                   "kind": "scalar"
                 }
               },
+              "aliexpressPick": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "categoryId": {
                 "nullable": true,
                 "type": {
@@ -1381,6 +1424,13 @@
                 "nullable": false,
                 "type": {
                   "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "offerEndsAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
                   "kind": "scalar"
                 }
               },
@@ -1523,6 +1573,9 @@
                 "active": {
                   "column": "active"
                 },
+                "aliexpressPick": {
+                  "column": "aliexpressPick"
+                },
                 "categoryId": {
                   "column": "categoryId"
                 },
@@ -1546,6 +1599,9 @@
                 },
                 "nameFr": {
                   "column": "nameFr"
+                },
+                "offerEndsAt": {
+                  "column": "offerEndsAt"
                 },
                 "priceMillimes": {
                   "column": "priceMillimes"
@@ -2192,6 +2248,13 @@
                   "kind": "scalar"
                 }
               },
+              "orderId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "quantity": {
                 "nullable": false,
                 "type": {
@@ -2265,6 +2328,22 @@
                   "namespace": "public"
                 }
               },
+              "order": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "orderId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Order",
+                  "namespace": "public"
+                }
+              },
               "subscribers": {
                 "cardinality": "1:N",
                 "on": {
@@ -2324,6 +2403,9 @@
                 },
                 "itemUrl": {
                   "column": "itemUrl"
+                },
+                "orderId": {
+                  "column": "orderId"
                 },
                 "quantity": {
                   "column": "quantity"
@@ -3393,6 +3475,15 @@
                 }
               ],
               "columns": {
+                "aliexpressPick": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
                 "chatClosedAt": {
                   "codecId": "pg/timestamptz-temporal@1",
                   "nativeType": "timestamptz",
@@ -3590,6 +3681,11 @@
                   "codecId": "pg/int4@1",
                   "nativeType": "int4",
                   "nullable": false
+                },
+                "termsAcceptedAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
                 },
                 "totalMillimes": {
                   "codecId": "pg/int4@1",
@@ -4043,6 +4139,15 @@
                   "nativeType": "bool",
                   "nullable": false
                 },
+                "aliexpressPick": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
                 "categoryId": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
@@ -4102,6 +4207,11 @@
                   },
                   "nativeType": "text",
                   "nullable": false
+                },
+                "offerEndsAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
                 },
                 "priceMillimes": {
                   "codecId": "pg/int4@1",
@@ -4791,6 +4901,11 @@
                   "nativeType": "text",
                   "nullable": true
                 },
+                "orderId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
                 "quantity": {
                   "codecId": "pg/int4@1",
                   "default": {
@@ -4839,7 +4954,25 @@
                   "nullable": false
                 }
               },
-              "foreignKeys": [],
+              "foreignKeys": [
+                {
+                  "onDelete": "setNull",
+                  "source": {
+                    "columns": [
+                      "orderId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "shipment"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "order"
+                  }
+                }
+              ],
               "indexes": [
                 {
                   "columns": [
@@ -4872,6 +5005,11 @@
                 {
                   "columns": [
                     "trackingCode"
+                  ]
+                },
+                {
+                  "columns": [
+                    "orderId"
                   ]
                 }
               ]
@@ -5527,7 +5665,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "61562973154ae20b9e06e39d16a36a657e1c87d2aa92019ddd6b3a2d995ecf8d"
+    "storageHash": "8eae8f045f89101319bf53d0a0942b3717e606915a664152aefe3671d2535432"
   },
   "execution": {
     "executionHash": "42a13e7e80e40dfb70cde6d78096999f57a9fe555cccad965785e499b3108665",

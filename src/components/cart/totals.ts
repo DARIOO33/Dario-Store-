@@ -10,7 +10,10 @@ export function summarize(rows: CartRow[]) {
   const subtotal = usable.reduce((sum, row) => sum + amount(row), 0);
   const physicalSubtotal = usable.filter((row) => row.product.type === "PHYSICAL").reduce((sum, row) => sum + amount(row), 0);
   const requiresShipping = usable.some((row) => row.product.type === "PHYSICAL");
-  const shipping = requiresShipping ? shippingFee(physicalSubtotal) : 0;
+  // AliExpress picks: shipping is in the price, and they can't share an order with other products.
+  const hasPick = usable.some((row) => row.product.aliexpressPick);
+  const mixedPicks = hasPick && usable.some((row) => !row.product.aliexpressPick);
+  const shipping = requiresShipping && !hasPick ? shippingFee(physicalSubtotal) : 0;
 
   return {
     usable,
@@ -20,5 +23,7 @@ export function summarize(rows: CartRow[]) {
     shipping,
     total: subtotal + shipping,
     hasVirtual: usable.some((row) => row.product.type === "VIRTUAL"),
+    hasPick,
+    mixedPicks,
   };
 }

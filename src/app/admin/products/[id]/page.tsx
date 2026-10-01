@@ -7,6 +7,7 @@ import ProductForm from "@/src/components/admin/ProductForm";
 import { cloudinaryConfigured } from "@/src/lib/cloudinary";
 import { millimesToInput } from "@/src/lib/money";
 import { requirePageRole } from "@/src/lib/guards";
+import { SUPPORT_TIME_ZONE } from "@/src/lib/store";
 
 export const metadata: Metadata = { title: "Edit product" };
 
@@ -48,6 +49,9 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
             imageUrls: product.images.map((image) => image.url).join("\n"),
             featured: product.featured,
             active: product.active,
+            aliexpressPick: product.aliexpressPick,
+            // Stored as the start of the day after the offer (Tunisia time): the form shows the last day.
+            offerEndsAt: product.offerEndsAt ? product.offerEndsAt.toZonedDateTimeISO(SUPPORT_TIME_ZONE).subtract({ days: 1 }).toPlainDate().toString() : "",
             variants: product.variants.map((variant) => ({
               id: variant.id,
               name: variant.name,

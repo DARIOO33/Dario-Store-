@@ -7,6 +7,7 @@ import { UserError } from "../lib/result";
 import { parseDinars } from "../lib/money";
 import { slugify } from "../lib/slug";
 import { uploadShopPhoto } from "./uploads";
+import { SUPPORT_TIME_ZONE } from "../lib/store";
 
 // What the admin form submits — everything as text, exactly as typed.
 export type ProductFormInput = {
@@ -22,6 +23,9 @@ export type ProductFormInput = {
   featured: boolean;
   active: boolean;
   variants: VariantFormInput[];
+  // AliExpress Picks: prepaid, 15-30 days, no shipping fee; "YYYY-MM-DD" (last day of the offer) or empty.
+  aliexpressPick: boolean;
+  offerEndsAt: string;
 };
 
 export type VariantFormInput = {
@@ -77,6 +81,16 @@ function parseVariants(list: VariantFormInput[]): VariantWriteInput[] {
   return variants;
 }
 
+// The offer runs until the end of that day in Tunisia (the admin picks a date, not a time).
+function parseOfferEnd(text: string) {
+  if (!text.trim()) return null;
+  try {
+    return Temporal.PlainDate.from(text.trim()).add({ days: 1 }).toZonedDateTime(SUPPORT_TIME_ZONE).toInstant();
+  } catch {
+    throw new UserError("The offer end date isn't valid.");
+  }
+}
+
 async function parseForm(input: ProductFormInput) {
   const name = input.name.trim();
   if (name.length < 2 || name.length > 120) {
@@ -129,6 +143,10 @@ async function parseForm(input: ProductFormInput) {
   }
   images.forEach(parseImageUrl);
 
+  const aliexpressPick = input.aliexpressPick === true;
+  if (aliexpressPick && type !== "PHYSICAL") throw new UserError("An AliExpress pick is a physical product: choose \"Physical\".");
+  const offerEndsAt = aliexpressPick ? parseOfferEnd(String(input.offerEndsAt ?? "")) : null;
+
   const data: ProductWriteInput = {
     name,
     description,
@@ -140,6 +158,8 @@ async function parseForm(input: ProductFormInput) {
     featured: input.featured,
     active: input.active,
     categoryId,
+    aliexpressPick,
+    offerEndsAt,
   };
 
   return { data, images, variants };

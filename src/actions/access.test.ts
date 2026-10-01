@@ -75,6 +75,7 @@ const TEAM_ACTIONS: [string, () => Promise<unknown>][] = [
   ["updateShipmentAction", () => shipments.updateShipmentAction("s-1", {} as never)],
   ["addShipmentUpdateAction", () => shipments.addShipmentUpdateAction("s-1", ["item-1"], "SHIPPED", "")],
   ["uploadShipmentImageAction", () => shipments.uploadShipmentImageAction(form())],
+  ["createTrackingFromOrderAction", () => shipments.createTrackingFromOrderAction("o-1")],
   ["removeShipmentEventAction", () => shipments.removeShipmentEventAction("s-1", "e-1")],
   ["deleteShipmentAction", () => shipments.deleteShipmentAction("s-1")],
   ["sendDeliveryEmailAction", () => orders.sendDeliveryEmailAction("o-1", "key: 123", true)],
@@ -91,7 +92,7 @@ beforeEach(() => {
 
 describe("admin-only server actions", () => {
   it("covers every team action exported from src/actions", () => {
-    expect(ADMIN_ACTIONS.length + TEAM_ACTIONS.length).toBe(26);
+    expect(ADMIN_ACTIONS.length + TEAM_ACTIONS.length).toBe(27);
   });
 
   it.each(ADMIN_ACTIONS)("%s refuses guests, customers and staff without touching any service", async (_name, call) => {

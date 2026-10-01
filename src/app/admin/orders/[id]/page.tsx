@@ -14,6 +14,8 @@ import { formatDateTime } from "@/src/lib/time";
 import { getT } from "@/src/i18n/server";
 import { requirePageRole } from "@/src/lib/guards";
 import { TEAM } from "@/src/lib/roles";
+import { ShipmentService } from "@/src/services/shipments";
+import CreateTrackingButton from "@/src/components/admin/CreateTrackingButton";
 
 export const metadata: Metadata = { title: "Order" };
 
@@ -25,6 +27,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
   const order = await OrderRepository.findById(id);
 
   if (!order) notFound();
+  const tracking = order.aliexpressPick ? await ShipmentService.forOrder(order.id) : null;
 
   const options = allowedStatuses(order.requiresShipping).map((value) => ({ value, label: statusLabel(t, value) }));
 
@@ -48,6 +51,22 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
         <OrderItemsPanel order={order} />
 
         <div className="orderSide">
+          {order.aliexpressPick && (
+            <section className="panel">
+              <h2>AliExpress pick</h2>
+              <p className="muted">
+                Terms accepted {order.termsAcceptedAt ? formatDateTime(order.termsAcceptedAt) : "—"}. Place the order on AliExpress once paid, then create its tracking: the link is posted in the chat, and the order follows the tracking (Shipped, Delivered).
+              </p>
+              {tracking ? (
+                <Link href={`/admin/shipments/${tracking.id}`} className="btn btnSm" style={{ marginTop: "0.6rem" }}>
+                  Open tracking {tracking.trackingCode} →
+                </Link>
+              ) : (
+                <CreateTrackingButton orderId={order.id} ready={order.status !== "PENDING" && order.status !== "CANCELLED"} />
+              )}
+            </section>
+          )}
+
           <section className="panel">
             <h2>Status</h2>
             <OrderStatusForm orderId={order.id} current={order.status} options={options} />

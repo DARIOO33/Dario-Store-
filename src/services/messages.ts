@@ -164,7 +164,10 @@ export const MessageService = {
 
     const problemReport = !access.asAdmin && closure === "store" ? problemReportState(order) : null;
 
-    return { messages: messages.map((message) => toChat(message, access.asAdmin)), closed: closure !== null, closure, payment, review, problemReport };
+    // The team's "Close chat" button: an AliExpress pick's chat stays open until the order is delivered.
+    const canClose = access.asAdmin && closure === null && !(order.aliexpressPick && order.status !== "DELIVERED");
+
+    return { messages: messages.map((message) => toChat(message, access.asAdmin)), closed: closure !== null, closure, payment, review, problemReport, canClose };
   },
 
   send: async (orderId: string, viewer: Viewer, asAdmin: boolean, text: string, image?: { bytes: Uint8Array }, sensitive = false) => {
@@ -210,6 +213,7 @@ export const MessageService = {
 
     const { order } = access;
     if (order.status === "CANCELLED") throw new UserError("A cancelled order's chat stays closed.");
+    if (closed && order.aliexpressPick && order.status !== "DELIVERED") throw new UserError("An AliExpress pick's chat stays open until the order is delivered.");
     if (!!order.chatClosedAt === closed) return;
 
     await OrderRepository.setChatClosed(orderId, closed ? now() : null);

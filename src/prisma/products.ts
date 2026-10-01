@@ -13,6 +13,8 @@ export type ProductFilter = {
   type?: ProductType;
   featured?: boolean;
   includeInactive?: boolean;
+  // Storefront lists pass the current time: AliExpress picks whose offer has ended are left out.
+  offersOpenAt?: Temporal.Instant;
 };
 
 export type ProductWriteInput = {
@@ -27,6 +29,8 @@ export type ProductWriteInput = {
   featured: boolean;
   active: boolean;
   categoryId: string | null;
+  aliexpressPick: boolean;
+  offerEndsAt: Temporal.Instant | null;
 };
 
 export type VariantWriteInput = {
@@ -53,6 +57,10 @@ function filtered(filter: ProductFilter) {
   if (filter.categoryId) query = query.where({ categoryId: filter.categoryId });
   if (filter.type) query = query.where({ type: filter.type });
   if (filter.featured !== undefined) query = query.where({ featured: filter.featured });
+  if (filter.offersOpenAt) {
+    const at = filter.offersOpenAt;
+    query = query.where((p) => or(p.offerEndsAt.isNull(), p.offerEndsAt.gt(at)));
+  }
 
   if (filter.q?.trim()) {
     const pattern = likePattern(filter.q.trim());

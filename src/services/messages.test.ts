@@ -498,3 +498,20 @@ describe("emailing the team about customer messages", () => {
     expect(notifications.customerMessage).not.toHaveBeenCalled();
   });
 });
+
+describe("an AliExpress pick's chat", () => {
+  it("can't be closed before the order is delivered, and the button isn't offered", async () => {
+    orders.findById.mockResolvedValue(order({ status: "SHIPPED", aliexpressPick: true }));
+
+    await expect(MessageService.setClosed("order-1", admin, true)).rejects.toThrow(/stays open until the order is delivered/);
+    await expect(MessageService.open("order-1", admin, true)).resolves.toMatchObject({ canClose: false });
+    expect(orders.setChatClosed).not.toHaveBeenCalled();
+  });
+
+  it("can be closed once delivered", async () => {
+    orders.findById.mockResolvedValue(order({ status: "DELIVERED", aliexpressPick: true }));
+    await expect(MessageService.open("order-1", admin, true)).resolves.toMatchObject({ canClose: true });
+    await MessageService.setClosed("order-1", admin, true);
+    expect(orders.setChatClosed).toHaveBeenCalled();
+  });
+});

@@ -11,6 +11,7 @@ import { FREE_SHIPPING_FROM_MILLIMES, SHIPPING_FLAT_MILLIMES } from "@/src/lib/s
 import type { ProductDetailData } from "@/src/services/catalog";
 import { useT } from "@/src/i18n/client";
 import { pixel } from "@/src/lib/meta-pixel";
+import { offerLastDay } from "@/src/lib/offers";
 
 // The interactive top half of a product page. It owns the chosen variant so
 // the photo, price, stock and add-to-cart button all follow it.
@@ -24,7 +25,8 @@ export default function ProductDetail({ product }: { product: ProductDetailData 
   const physical = product.type === "PHYSICAL";
   const price = variant ? variant.priceMillimes : product.priceMillimes;
   const stock = variant ? variant.stock : product.stock;
-  const available = variant ? variant.available : product.available;
+  // A pick whose offer has ended can't be bought, whichever option is chosen.
+  const available = !product.offerEnded && (variant ? variant.available : product.available);
   const lowStock = stock !== null && stock > 0 && stock <= 5;
 
   // One Meta Pixel "ViewContent" per product page (not per option picked).
@@ -43,8 +45,10 @@ export default function ProductDetail({ product }: { product: ProductDetailData 
       <div className="pdpInfo">
         <div className="pdpTags">
           <span className={`pill ${physical ? "pillAmber" : "pillCobalt"}`}>{physical ? t("product.physical") : t("product.digital")}</span>
-          {product.featured && <span className="pill pillRed">{t("product.featured")}</span>}
-          {!available && <span className="pill pillInk">{t("product.soldOut")}</span>}
+          {product.aliexpressPick && <span className="pill pillRed">{t("product.pickBadge")}</span>}
+          {product.featured && !product.aliexpressPick && <span className="pill pillRed">{t("product.featured")}</span>}
+          {!available && <span className="pill pillInk">{product.offerEnded ? t("product.offerEnded") : t("product.soldOut")}</span>}
+          {product.aliexpressPick && product.offerEndsAt && !product.offerEnded && <span className="pill pillAmber">{t("product.offerEnds", { date: offerLastDay(product.offerEndsAt, t.locale) })}</span>}
           {available && lowStock && <span className="pill pillAmber">{t("product.onlyLeft", { count: stock })}</span>}
         </div>
 
@@ -94,7 +98,16 @@ export default function ProductDetail({ product }: { product: ProductDetailData 
         )}
 
         <div className="deliveryNote">
-          {physical ? (
+          {product.aliexpressPick ? (
+            <>
+              <strong>{t("product.pickNoticeTitle")}</strong>
+              <ul className="pickNotice">
+                <li>{t("product.pickNoticeDelivery")}</li>
+                <li>{t("product.pickNoticeCustoms")}</li>
+                <li>{t("product.pickNoticePrepaid")}</li>
+              </ul>
+            </>
+          ) : physical ? (
             <>
               <strong>{t("product.deliveredTitle")}</strong>{" "}
               {t("product.deliveredText", {
@@ -110,7 +123,13 @@ export default function ProductDetail({ product }: { product: ProductDetailData 
         </div>
 
         <div className="pdpBuy">
+          {product.offerEnded ? (
+            <button type="button" className="btn btnLg btnBlock" disabled>
+              {t("product.offerEnded")}
+            </button>
+          ) : (
           <AddToCartPanel key={variantId ?? "base"} productId={product.id} name={variant ? `${product.name} (${variant.name})` : product.name} priceMillimes={price} variantId={variantId} available={available} stock={stock} />
+          )}
         </div>
 
         {product.description && (

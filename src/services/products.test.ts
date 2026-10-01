@@ -12,7 +12,7 @@ import { ProductService, type ProductFormInput } from "./products";
 const products = vi.mocked(ProductRepository);
 
 function form(changes: Partial<ProductFormInput> = {}): ProductFormInput {
-  return { name: "KZ Castor", description: "", nameFr: "", descriptionFr: "", type: "PHYSICAL", price: "50", stock: "10", categoryId: "", imageUrls: "", featured: false, active: true, variants: [], ...changes };
+  return { name: "KZ Castor", description: "", nameFr: "", descriptionFr: "", type: "PHYSICAL", price: "50", stock: "10", categoryId: "", imageUrls: "", featured: false, active: true, variants: [], aliexpressPick: false, offerEndsAt: "", ...changes };
 }
 
 beforeEach(() => {
@@ -64,5 +64,22 @@ describe("admin product form", () => {
 
   it("refuses an upload that is not really a photo", async () => {
     await expect(ProductService.uploadImage(new TextEncoder().encode("<svg onload=alert(1)>"))).rejects.toThrow(/JPG, PNG or WebP/);
+  });
+});
+
+describe("AliExpress picks in the product form", () => {
+  it("saves the pick flag and ends the offer at the end of its last day, Tunisia time", async () => {
+    await ProductService.create(form({ aliexpressPick: true, offerEndsAt: "2026-10-04" }));
+    expect(products.create).toHaveBeenCalledWith(expect.objectContaining({ aliexpressPick: true, offerEndsAt: Temporal.Instant.from("2026-10-04T23:00:00Z") }));
+  });
+
+  it("only allows physical picks, and ignores the date on a normal product", async () => {
+    await expect(ProductService.create(form({ aliexpressPick: true, type: "VIRTUAL" }))).rejects.toThrow(/physical/);
+    await ProductService.create(form({ aliexpressPick: false, offerEndsAt: "2026-10-04" }));
+    expect(products.create).toHaveBeenCalledWith(expect.objectContaining({ aliexpressPick: false, offerEndsAt: null }));
+  });
+
+  it("refuses an invalid end date", async () => {
+    await expect(ProductService.create(form({ aliexpressPick: true, offerEndsAt: "next week" }))).rejects.toThrow(/offer end date/);
   });
 });

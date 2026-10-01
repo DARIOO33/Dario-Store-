@@ -38,6 +38,16 @@ export const legalFr: LegalTexts = {
         ],
       },
       {
+        id: "aliexpress-picks",
+        heading: "AliExpress Picks",
+        paragraphs: [
+          "Les AliExpress Picks sont des produits que nous commandons pour vous sur AliExpress. Ils sont payés en totalité à l'avance (le prix comprend déjà la livraison), nécessitent un compte et se commandent séparément de nos autres produits. En cochant la case lors de la commande, vous acceptez ces conditions.",
+          "Nous passons votre commande chez AliExpress dès que votre paiement est confirmé. La livraison prend généralement 15 à 30 jours ; c'est une estimation d'AliExpress, parfois plus longue. Vous suivez chaque colis sur votre page de suivi et pouvez recevoir des mises à jour par e-mail.",
+          "Les frais de douane ne sont pas inclus : vous les payez à la livraison. Ils commencent à 4 DT par colis et dépendent du produit. Plusieurs articles peuvent arriver dans des colis séparés, chacun avec ses propres frais.",
+          "Colis endommagé : filmez son ouverture, du colis fermé jusqu'à la sortie de l'article, puis envoyez-nous la vidéo dans le chat de la commande. Sans cette vidéo de déballage, nous ne pouvons pas rembourser un article endommagé.",
+        ],
+      },
+      {
         heading: "Votre compte",
         paragraphs: [
           "Gardez vos identifiants privés. Les commandes passées depuis votre compte sont considérées comme passées par vous.",

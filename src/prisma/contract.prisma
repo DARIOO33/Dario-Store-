@@ -162,6 +162,11 @@ model Product {
   // `active` hides an item without deleting it.
   featured      Boolean     @default(false)
   active        Boolean     @default(true)
+  // AliExpress Picks: weekly offers the shop orders from AliExpress for the customer. Paid in advance, never mixed
+  // with other products in one order, no shipping fee, 15-30 days. After `offerEndsAt` the pick can't be bought
+  // and leaves the shop (null = no end date).
+  aliexpressPick Boolean    @default(false)
+  offerEndsAt   Timestamptz?
   // Totals over the visible reviews, kept up to date whenever a review changes,
   // so product cards can show the average without an extra query.
   ratingCount   Int         @default(0)
@@ -253,6 +258,9 @@ model Order {
   locale             String      @default("en")
   // When the admin last emailed the customer their delivery (the email itself is not stored).
   deliveryEmailSentAt Timestamptz?
+  // An order of AliExpress Picks (see Product.aliexpressPick) and when the customer ticked its terms at checkout.
+  aliexpressPick     Boolean     @default(false)
+  termsAcceptedAt    Timestamptz?
   // When the order reached each stage (shown to the customer in the chat).
   paidAt             Timestamptz?
   shippedAt          Timestamptz?
@@ -266,6 +274,7 @@ model Order {
   updatedAt          Timestamptz @default(now())
 
   user  User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  shipment Shipment?
   items    OrderItem[]
   messages OrderMessage[]
   reviews  Review[]
@@ -393,6 +402,8 @@ model Shipment {
   reference             Int            @unique @default(autoincrement())
   // The unguessable code in the tracking link, e.g. DS-7K4Q9-X2M3F.
   trackingCode          String         @unique
+  // The shop order it tracks, for AliExpress Picks ordered on the site (null for requests made on Instagram etc.).
+  orderId               String?        @unique
   customerName          String
   customerPhone         String?
   customerAddress       String?
@@ -413,6 +424,7 @@ model Shipment {
   createdAt             Timestamptz    @default(now())
   updatedAt             Timestamptz    @default(now())
 
+  order       Order?               @relation(fields: [orderId], references: [id], onDelete: SetNull)
   events      ShipmentEvent[]
   items       ShipmentItem[]
   subscribers ShipmentSubscriber[]

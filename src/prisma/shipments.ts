@@ -81,8 +81,12 @@ export const ShipmentRepository = {
     return !!(await db.orm.public.Shipment.first({ trackingCode }));
   },
 
-  create: async (data: ShipmentWriteInput & { trackingCode: string }) => {
+  create: async (data: ShipmentWriteInput & { trackingCode: string; orderId?: string | null }) => {
     return await db.orm.public.Shipment.create(data);
+  },
+
+  findByOrderId: async (orderId: string) => {
+    return await db.orm.public.Shipment.first({ orderId });
   },
 
   update: async (id: string, data: ShipmentWriteInput) => {

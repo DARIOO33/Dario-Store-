@@ -31,6 +31,7 @@ export default function CartLineRow({ row: { line, product, available, cap }, on
         )}
         <div className="cartMeta">
           {product && <span className={`pill ${product.type === "VIRTUAL" ? "pillCobalt" : "pillAmber"}`}>{product.type === "VIRTUAL" ? t("product.digital") : t("product.physical")}</span>}
+          {product?.aliexpressPick && <span className="pill pillRed">{t("product.pickBadge")}</span>}
           {product && <span className="muted">{t("cart.priceEach", { price: formatMillimes(product.priceMillimes) })}</span>}
         </div>
         {!available && <p className="cartWarn">{product ? t("cart.noLongerAvailable") : t("cart.productRemoved")}</p>}

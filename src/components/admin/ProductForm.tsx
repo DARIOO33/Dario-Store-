@@ -203,6 +203,25 @@ export default function ProductForm({ productId, initial, categories, canUpload 
         </label>
       </div>
 
+      <fieldset className="variantEditor">
+        <legend>AliExpress pick</legend>
+        <label className="check">
+          <input type="checkbox" checked={form.aliexpressPick} onChange={(e) => set("aliexpressPick", e.target.checked)} />
+          This is an AliExpress pick (ordered from AliExpress for the customer)
+        </label>
+        {form.aliexpressPick && (
+          <>
+            <p className="hint">
+              Paid in advance with an account, never in the same order as other products, no shipping fee (put everything in the price), delivered in 15–30 days, customs fees paid by the customer on delivery. The customer must accept the pick terms at checkout.
+            </p>
+            <div className="field">
+              <label htmlFor="p-offer-end">Offer ends (last day it can be bought, empty = no end)</label>
+              <input id="p-offer-end" className="input" type="date" value={form.offerEndsAt} onChange={(e) => set("offerEndsAt", e.target.value)} />
+            </div>
+          </>
+        )}
+      </fieldset>
+
       {error && <p className="error" role="alert">{error}</p>}
 
       <div className="formActions">

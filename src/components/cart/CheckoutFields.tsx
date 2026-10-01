@@ -26,14 +26,19 @@ type Props = {
   // Digital items in the cart, but nobody is logged in (and the session has finished loading).
   needsLogin: boolean;
   requiresShipping: boolean;
+  // Digital products or AliExpress picks: paid online in advance, with an account.
   hasVirtual: boolean;
+  // An order of AliExpress picks: its terms must be read and accepted.
+  isPick: boolean;
+  acceptedPickTerms: boolean;
+  onAcceptPickTerms: (accepted: boolean) => void;
   // How fast the shop answers right now (set by the admin).
   availability: Availability;
 };
 
 // The checkout form. What it asks for depends on the cart: an address only for
 // physical items, and an online payment method (with an account) for digital ones.
-export default function CheckoutFields({ form, onChange, onSubmit, error, signedIn, needsLogin, requiresShipping, hasVirtual, availability }: Props) {
+export default function CheckoutFields({ form, onChange, onSubmit, error, signedIn, needsLogin, requiresShipping, hasVirtual, isPick, acceptedPickTerms, onAcceptPickTerms, availability }: Props) {
   const t = useT();
   const needsPayment = hasVirtual && signedIn;
   const rememberCart = () => rememberAfterLogin("/cart");
@@ -44,7 +49,7 @@ export default function CheckoutFields({ form, onChange, onSubmit, error, signed
 
       {needsLogin && (
         <div className="gate" role="note">
-          <strong>{t("checkout.gateTitle")}</strong>
+          <strong>{isPick ? t("checkout.picksGateTitle") : t("checkout.gateTitle")}</strong>
           <p>{t("checkout.gateText")}</p>
           <div className="gateActions">
             <Link href="/login" className="btn btnPrimary" onClick={rememberCart}>
@@ -148,6 +153,30 @@ export default function CheckoutFields({ form, onChange, onSubmit, error, signed
             <strong>{t("checkout.codTitle")}</strong> {t("checkout.codText")}
           </p>
         )
+      )}
+
+      {isPick && (
+        <div className="pickTerms" role="group" aria-labelledby="pick-terms-title">
+          <strong id="pick-terms-title">{t("checkout.picksTermsTitle")}</strong>
+          <ul>
+            <li>{t("checkout.picksTermPrepaid")}</li>
+            <li>{t("checkout.picksTermDelivery")}</li>
+            <li>{t("checkout.picksTermCustoms")}</li>
+            <li>
+              <strong>{t("checkout.picksTermVideo")}</strong>
+            </li>
+            <li>{t("checkout.picksTermSeparate")}</li>
+          </ul>
+          <label className="check">
+            <input type="checkbox" checked={acceptedPickTerms} onChange={(e) => onAcceptPickTerms(e.target.checked)} required />
+            <span>
+              {t("checkout.picksAccept")}{" "}
+              <Link href="/terms#aliexpress-picks" className="linkBtn" target="_blank">
+                {t("checkout.picksReadAll")}
+              </Link>
+            </span>
+          </label>
+        </div>
       )}
 
       <div className="field">

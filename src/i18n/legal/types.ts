@@ -3,7 +3,8 @@
 export type LegalPage = {
   title: string;
   intro: string;
-  sections: { heading: string; paragraphs: string[] }[];
+  // `id`: an anchor so other pages can link to a section (/terms#aliexpress-picks).
+  sections: { heading: string; paragraphs: string[]; id?: string }[];
 };
 
 export type LegalTexts = { terms: LegalPage; privacy: LegalPage };

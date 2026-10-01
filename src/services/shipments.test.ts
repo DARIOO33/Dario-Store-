@@ -3,14 +3,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("../prisma/shipments", () => ({
   ShipmentRepository: {
     findByCode: vi.fn(), findById: vi.fn(), findEvent: vi.fn(), codeExists: vi.fn(), create: vi.fn(), update: vi.fn(), replaceItems: vi.fn(),
-    setItemStatus: vi.fn(), setStatus: vi.fn(), addEvent: vi.fn(), deleteEvent: vi.fn(), listSubscribers: vi.fn(),
+    setItemStatus: vi.fn(), setStatus: vi.fn(), addEvent: vi.fn(), deleteEvent: vi.fn(), listSubscribers: vi.fn(), findByOrderId: vi.fn(),
   },
 }));
+vi.mock("../prisma/orders", () => ({ OrderRepository: { findById: vi.fn() } }));
+vi.mock("../prisma/products", () => ({ ProductRepository: { findByIds: vi.fn() } }));
+vi.mock("../prisma/messages", () => ({ MessageRepository: { create: vi.fn() } }));
+vi.mock("./orders", () => ({ OrderService: { setStatus: vi.fn() } }));
 vi.mock("./shipment-notifications", () => ({ ShipmentNotifications: { sendUpdate: vi.fn() } }));
 vi.mock("./uploads", () => ({ uploadShopPhoto: vi.fn() }));
 
 import { ShipmentRepository } from "../prisma/shipments";
 import { ShipmentNotifications } from "./shipment-notifications";
+import { OrderRepository } from "../prisma/orders";
+import { ProductRepository } from "../prisma/products";
+import { MessageRepository } from "../prisma/messages";
+import { OrderService } from "./orders";
 import { ShipmentService, overallStatus, type ShipmentFormInput, type ShipmentItemFormInput } from "./shipments";
 
 const repo = vi.mocked(ShipmentRepository);
@@ -180,5 +188,73 @@ describe("the admin's view", () => {
       { email: "not-confirmed@gmail.com", verifiedAt: null },
     ] as never);
     await expect(ShipmentService.getForAdmin("s-1")).resolves.toMatchObject({ subscribers: ["m***@gmail.com"] });
+  });
+});
+
+describe("AliExpress pick orders and their tracking", () => {
+  const orders = vi.mocked(OrderRepository);
+  const productsRepo = vi.mocked(ProductRepository);
+  const chat = vi.mocked(MessageRepository);
+  const orderService = vi.mocked(OrderService);
+
+  const pickOrder = (changes: Record<string, unknown> = {}) =>
+    ({
+      id: "o-1", orderNumber: 41, userId: "user-1", locale: "fr", status: "PAID", aliexpressPick: true,
+      customerName: "Sami Ben Ali", customerPhone: "22 123 456", shippingAddress: "12 Rue de Marseille", shippingCity: "Tunis",
+      items: [{ productId: "p-1", productName: "Earbuds ANC", variantName: "Black", quantity: 2 }, { productId: "p-2", productName: "Mouse", variantName: null, quantity: 1 }],
+      ...changes,
+    }) as never;
+
+  beforeEach(() => {
+    orders.findById.mockResolvedValue(pickOrder());
+    repo.findByOrderId.mockResolvedValue(null);
+    productsRepo.findByIds.mockResolvedValue([{ id: "p-1", images: [{ url: "https://res.cloudinary.com/earbuds.jpg" }] }, { id: "p-2", images: [] }] as never);
+  });
+
+  it("'Create tracking' copies the customer and items (with photos), links the order and posts the link in the chat", async () => {
+    const { trackingCode } = await ShipmentService.createFromOrder("o-1");
+
+    expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ orderId: "o-1", customerName: "Sami Ben Ali", customerPhone: "22 123 456", customerCity: "Tunis" }));
+    expect(repo.replaceItems.mock.calls[0]![1]).toEqual([
+      expect.objectContaining({ name: "Earbuds ANC (Black)", quantity: 2, imageUrl: "https://res.cloudinary.com/earbuds.jpg" }),
+      expect.objectContaining({ name: "Mouse", quantity: 1, imageUrl: null }),
+    ]);
+    expect(chat.create).toHaveBeenCalledWith(expect.objectContaining({ orderId: "o-1", fromAdmin: true, body: expect.stringContaining(`/track/${trackingCode}`) }));
+    expect(chat.create.mock.calls[0]![0].body).toMatch(/^Votre commande est passée chez AliExpress/);
+  });
+
+  it("gives back the existing tracking instead of creating a second one", async () => {
+    repo.findByOrderId.mockResolvedValue({ id: "s-9", trackingCode: "DS-AAAAA-BBBBB" } as never);
+    await expect(ShipmentService.createFromOrder("o-1")).resolves.toEqual({ id: "s-9", trackingCode: "DS-AAAAA-BBBBB" });
+    expect(repo.create).not.toHaveBeenCalled();
+  });
+
+  it("is only for paid pick orders", async () => {
+    orders.findById.mockResolvedValue(pickOrder({ aliexpressPick: false }));
+    await expect(ShipmentService.createFromOrder("o-1")).rejects.toThrow(/Only AliExpress pick/);
+    orders.findById.mockResolvedValue(pickOrder({ status: "PENDING" }));
+    await expect(ShipmentService.createFromOrder("o-1")).rejects.toThrow(/paid/);
+    expect(repo.create).not.toHaveBeenCalled();
+  });
+
+  it("moves the order to Shipped, then Delivered, as the tracking goes", async () => {
+    repo.findById.mockResolvedValue(shipment({ orderId: "o-1", items: [item("a", { status: "IN_TRANSIT" }), item("b", { status: "SHIPPED" })] }));
+    await ShipmentService.addUpdate("s-1", ["a"], "IN_TUNISIA", "");
+    expect(orderService.setStatus).toHaveBeenLastCalledWith("o-1", "SHIPPED");
+
+    orders.findById.mockResolvedValue(pickOrder({ status: "SHIPPED" }));
+    repo.findById.mockResolvedValue(shipment({ orderId: "o-1", items: [item("a", { status: "DELIVERED" }), item("b", { status: "DELIVERED" })] }));
+    await ShipmentService.addUpdate("s-1", ["a", "b"], "DELIVERED", "");
+    expect(orderService.setStatus).toHaveBeenLastCalledWith("o-1", "DELIVERED");
+  });
+
+  it("leaves a pending, cancelled or unlinked order alone", async () => {
+    orders.findById.mockResolvedValue(pickOrder({ status: "PENDING" }));
+    repo.findById.mockResolvedValue(shipment({ orderId: "o-1", items: [item("a", { status: "DELIVERED" })] }));
+    await ShipmentService.addUpdate("s-1", ["a"], "DELIVERED", "");
+
+    repo.findById.mockResolvedValue(shipment({ orderId: null, items: [item("a", { status: "DELIVERED" })] }));
+    await ShipmentService.addUpdate("s-1", ["a"], "DELIVERED", "");
+    expect(orderService.setStatus).not.toHaveBeenCalled();
   });
 });

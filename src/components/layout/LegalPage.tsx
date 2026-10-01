@@ -24,7 +24,7 @@ export default async function LegalPage({ page }: { page: "terms" | "privacy" })
 
       <article className="legal">
         {content.sections.map((section) => (
-          <section key={section.heading}>
+          <section key={section.heading} id={section.id}>
             <h2>{section.heading}</h2>
             {section.paragraphs.map((paragraph) => (
               <p key={paragraph}>{fill(paragraph)}</p>

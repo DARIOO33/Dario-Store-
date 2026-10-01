@@ -15,6 +15,7 @@ import { availabilityText } from "@/src/lib/availability";
 import { formatDateTime } from "@/src/lib/time";
 import { getT, pageTitle } from "@/src/i18n/server";
 import { isTeam } from "@/src/lib/roles";
+import { ShipmentService } from "@/src/services/shipments";
 
 export const dynamic = "force-dynamic";
 export const generateMetadata = pageTitle("order.title");
@@ -39,7 +40,11 @@ export default async function OrderPage({ params, searchParams }: Props) {
   const isOwner = !!viewer && viewer.id === order.userId;
   const isAdmin = isTeam(viewer?.role);
   const canChat = isOwner || (isAdmin && !!order.userId);
-  const [reviewLinks, availability] = await Promise.all([ReviewService.reviewLinksForOrder(viewer, order), AvailabilityService.current()]);
+  const [reviewLinks, availability, tracking] = await Promise.all([
+    ReviewService.reviewLinksForOrder(viewer, order),
+    AvailabilityService.current(),
+    order.aliexpressPick ? ShipmentService.forOrder(order.id) : null,
+  ]);
   // Only while the order still waits for the shop (payment to check, or delivery to make).
   const waitingForShop = order.paymentMethod !== "CASH_ON_DELIVERY" && (order.status === "PENDING" || order.status === "PAID");
 
@@ -104,6 +109,20 @@ export default async function OrderPage({ params, searchParams }: Props) {
           />
 
           {waitingForShop && <p className="deliveryNote">{availabilityText(t, availability)}</p>}
+
+          {order.aliexpressPick && !cancelled && (
+            <section className="panel">
+              <h2>{t("order.pickTitle")}</h2>
+              <p className="muted">{t("order.pickText")}</p>
+              {tracking ? (
+                <Link href={`/track/${tracking.trackingCode}`} className="btn btnAccent" style={{ marginTop: "0.8rem" }}>
+                  {t("order.pickTrack")}
+                </Link>
+              ) : (
+                <p className="hint" style={{ marginTop: "0.6rem" }}>{t("order.pickTrackSoon")}</p>
+              )}
+            </section>
+          )}
 
           <section className="panel">
             <h2>{t("order.contact")}</h2>

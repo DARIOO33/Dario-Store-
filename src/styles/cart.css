@@ -374,3 +374,27 @@
     animation-duration: 2.4s;
   }
 }
+
+/* AliExpress picks: the terms the customer must accept before ordering. */
+.pickTerms {
+  display: grid;
+  gap: 0.7rem;
+  padding: 1rem 1.1rem;
+  border: 1.5px solid var(--ink);
+  background: var(--amber-soft);
+}
+
+.pickTerms ul {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.pickTerms .check {
+  align-items: flex-start;
+}
+
+.pickTerms .check input {
+  margin-top: 0.25rem;
+}

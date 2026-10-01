@@ -11,6 +11,13 @@ import { CONTACT_CHANNELS, SHIPMENT_STATUSES, SHIPMENT_STEPS, normalizeTrackingC
 import { runAfterResponse } from "../lib/background";
 import { uploadShopPhoto } from "./uploads";
 import { ShipmentNotifications } from "./shipment-notifications";
+import { OrderService } from "./orders";
+import { OrderRepository } from "../prisma/orders";
+import { ProductRepository } from "../prisma/products";
+import { MessageRepository } from "../prisma/messages";
+import { siteUrl } from "../lib/store";
+import { createTranslator } from "../i18n/translate";
+import { toLocale } from "../i18n/config";
 
 // What the admin form sends: everything as text, exactly as typed.
 export type ShipmentItemFormInput = {
@@ -151,9 +158,25 @@ export function overallStatus(items: { status: ShipmentStatus }[]): ShipmentStat
 
 type ShipmentRow = NonNullable<Awaited<ReturnType<typeof ShipmentRepository.findById>>>;
 
+// A shipment made from an AliExpress pick order moves that order along: Shipped once its items are on
+// the way, Delivered once every item is. (Moves only forward; pending or cancelled orders are left alone.)
+const ON_THE_WAY: ShipmentStatus[] = ["SHIPPED", "IN_TRANSIT", "IN_TUNISIA", "OUT_FOR_DELIVERY"];
+
+async function syncOrder(orderId: string | null, overall: ShipmentStatus) {
+  if (!orderId) return;
+  const target = overall === "DELIVERED" ? "DELIVERED" : ON_THE_WAY.includes(overall) ? "SHIPPED" : null;
+  const order = target ? await OrderRepository.findById(orderId) : null;
+  if (!order || !target || order.status === target || order.status === "PENDING" || order.status === "CANCELLED") return;
+  if (target === "SHIPPED" && order.status === "DELIVERED") return;
+  await OrderService.setStatus(order.id, target);
+}
+
 async function refreshOverall(shipment: ShipmentRow) {
   const fresh = await ShipmentRepository.findById(shipment.id);
-  if (fresh) await ShipmentRepository.setStatus(fresh.id, overallStatus(fresh.items));
+  if (!fresh) return null;
+  const overall = overallStatus(fresh.items);
+  await ShipmentRepository.setStatus(fresh.id, overall);
+  await syncOrder(fresh.orderId, overall);
   return fresh;
 }
 
@@ -238,6 +261,57 @@ export const ShipmentService = {
 
   remove: async (id: string) => {
     await ShipmentRepository.delete(id);
+  },
+
+  // AliExpress picks: once paid, the team turns the order into a shipment in one click (customer and items
+  // copied from the order, product photos included) and the customer gets the tracking link in the order chat.
+  createFromOrder: async (orderId: string) => {
+    const order = await OrderRepository.findById(orderId);
+    if (!order) throw new UserError("That order no longer exists.");
+    if (!order.aliexpressPick) throw new UserError("Only AliExpress pick orders get a tracking page from here.");
+    if (order.status === "PENDING" || order.status === "CANCELLED") throw new UserError("Mark the order as paid before creating its tracking.");
+
+    const existing = await ShipmentRepository.findByOrderId(orderId);
+    if (existing) return { id: existing.id, trackingCode: existing.trackingCode };
+
+    const products = await ProductRepository.findByIds(order.items.flatMap((item) => (item.productId ? [item.productId] : [])));
+    const photo = (productId: string | null) => products.find((p) => p.id === productId)?.images[0]?.url ?? null;
+
+    const shipment = await ShipmentRepository.create({
+      trackingCode: await newTrackingCode(),
+      orderId,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
+      customerAddress: order.shippingAddress,
+      customerCity: order.shippingCity,
+      contactChannel: null,
+      adminNotes: `AliExpress pick — order #${order.orderNumber}`,
+    });
+    await ShipmentRepository.replaceItems(
+      shipment.id,
+      order.items.map((item) => ({
+        name: item.variantName ? `${item.productName} (${item.variantName})` : item.productName,
+        quantity: item.quantity,
+        url: null,
+        imageUrl: photo(item.productId),
+        carrier: null,
+        trackingNumber: null,
+        estimatedArrival: null,
+      })),
+    );
+    await ShipmentRepository.addEvent(shipment.id, null, "RECEIVED", "We received your order.");
+
+    if (order.userId) {
+      const t = createTranslator(toLocale(order.locale));
+      await MessageRepository.create({ orderId, fromAdmin: true, body: t("chatSystem.trackingReady", { url: `${siteUrl()}/track/${shipment.trackingCode}` }), hasImage: false });
+    }
+    return { id: shipment.id, trackingCode: shipment.trackingCode };
+  },
+
+  // For the order pages: the tracking made from this order, if any.
+  forOrder: async (orderId: string) => {
+    const shipment = await ShipmentRepository.findByOrderId(orderId);
+    return shipment ? { id: shipment.id, trackingCode: shipment.trackingCode } : null;
   },
 
   uploadImage: async (bytes: Uint8Array) => await uploadShopPhoto(bytes, "dario-store/shipments"),

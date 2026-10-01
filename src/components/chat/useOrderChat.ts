@@ -17,6 +17,7 @@ export function useOrderChat(orderId: string, asAdmin: boolean) {
   const [closure, setClosure] = useState<ChatClosure>(null);
   const [review, setReview] = useState<ChatReview | null>(null);
   const [problemReport, setProblemReport] = useState<ProblemReportState | null>(null);
+  const [canClose, setCanClose] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -31,6 +32,7 @@ export function useOrderChat(orderId: string, asAdmin: boolean) {
     setClosure(result.closure);
     setReview(result.review);
     setProblemReport(result.problemReport);
+    setCanClose(result.canClose);
     setPayment(result.payment);
     setLoaded(true);
   }, [orderId, asAdmin]);
@@ -96,6 +98,7 @@ export function useOrderChat(orderId: string, asAdmin: boolean) {
     closure,
     review,
     problemReport,
+    canClose,
     loaded,
     error,
     busy,

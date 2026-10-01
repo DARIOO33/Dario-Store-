@@ -26,7 +26,7 @@ export default async function NewProductPage() {
         <ProductForm
           categories={categories.map((c) => ({ id: c.id, name: c.name }))}
           canUpload={cloudinaryConfigured()}
-          initial={{ name: "", description: "", nameFr: "", descriptionFr: "", type: "PHYSICAL", price: "", stock: "", categoryId: "", imageUrls: "", featured: false, active: true, variants: [] }}
+          initial={{ name: "", description: "", nameFr: "", descriptionFr: "", type: "PHYSICAL", price: "", stock: "", categoryId: "", imageUrls: "", featured: false, active: true, variants: [], aliexpressPick: false, offerEndsAt: "" }}
         />
       </div>
     </>

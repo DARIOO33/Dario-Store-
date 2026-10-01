@@ -18,7 +18,8 @@ export default async function ProductCard({ product }: { product: ProductCardDat
         </div>
         <div className="pcardBadges">
           {product.type === "VIRTUAL" && <span className="pill pillCobalt">{t("product.digital")}</span>}
-          {!product.available && <span className="pill pillInk">{t("product.soldOut")}</span>}
+          {product.aliexpressPick && <span className="pill pillRed">{t("product.pickBadge")}</span>}
+          {!product.available && <span className="pill pillInk">{product.offerEnded ? t("product.offerEnded") : t("product.soldOut")}</span>}
           {product.available && product.lowStock && <span className="pill pillAmber">{t("product.lowStock")}</span>}
         </div>
       </Link>

@@ -5,6 +5,7 @@ import { ProductRepository, type ProductSort, type ProductType } from "../prisma
 import { CategoryRepository } from "../prisma/categories";
 import { LOW_STOCK_THRESHOLD, PAGE_SIZE } from "../lib/store";
 import { localized } from "../i18n/content";
+import { now } from "../lib/time";
 import type { Locale } from "../i18n/config";
 
 type ProductRow = Awaited<ReturnType<typeof ProductRepository.findMany>>[number];
@@ -37,6 +38,10 @@ export type ProductCardData = {
   // With variants the price above is the lowest one ("from …") and the card
   // sends people to the product page to choose.
   hasVariants: boolean;
+  // AliExpress Picks (prepaid, 15-30 days): when the offer ends, as an ISO date-time (null = no end).
+  aliexpressPick: boolean;
+  offerEndsAt: string | null;
+  offerEnded: boolean;
 };
 
 export type ProductDetailData = ProductCardData & {
@@ -61,6 +66,8 @@ export type CartLineData = {
   imageUrl: string | null;
   stock: number | null;
   available: boolean;
+  // The cart keeps AliExpress picks in their own order and shows their terms.
+  aliexpressPick: boolean;
 };
 
 
@@ -76,6 +83,9 @@ function toVariant(variant: VariantRow): VariantData {
     available: variant.active && (variant.stock === null || variant.stock > 0),
   };
 }
+
+// A pick whose last day has passed can't be bought any more.
+const offerEnded = (product: { offerEndsAt: Temporal.Instant | null }) => !!product.offerEndsAt && Temporal.Instant.compare(product.offerEndsAt, now()) <= 0;
 
 // `locale` picks the French name/description when there is one.
 function toCard(product: ProductRow, locale: Locale): ProductCardData {
@@ -94,11 +104,14 @@ function toCard(product: ProductRow, locale: Locale): ProductCardData {
     imageUrl: product.images[0]?.url ?? null,
     categoryName: product.category ? localized(locale, product.category.name, product.category.nameFr) : null,
     featured: product.featured,
-    available: product.active && inStock,
+    available: product.active && inStock && !offerEnded(product),
     lowStock: !hasVariants && product.stock !== null && product.stock > 0 && product.stock <= LOW_STOCK_THRESHOLD,
     hasVariants,
     ratingCount: product.ratingCount,
     ratingAverage: product.ratingCount > 0 ? Math.round((product.ratingSum / product.ratingCount) * 10) / 10 : null,
+    aliexpressPick: product.aliexpressPick,
+    offerEndsAt: product.offerEndsAt?.toString() ?? null,
+    offerEnded: offerEnded(product),
   };
 }
 
@@ -115,18 +128,18 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const CatalogService = {
   featured: async (limit: number, locale: Locale) => {
-    const rows = await ProductRepository.findMany({ featured: true }, "newest", limit, 0);
+    const rows = await ProductRepository.findMany({ featured: true, offersOpenAt: now() }, "newest", limit, 0);
     return rows.map((row) => toCard(row, locale));
   },
 
   latest: async (limit: number, locale: Locale) => {
-    const rows = await ProductRepository.findMany({}, "newest", limit, 0);
+    const rows = await ProductRepository.findMany({ offersOpenAt: now() }, "newest", limit, 0);
     return rows.map((row) => toCard(row, locale));
   },
 
   // A few products from one category, for the home page shelves.
   byCategory: async (categoryId: string, limit: number, locale: Locale) => {
-    const rows = await ProductRepository.findMany({ categoryId }, "newest", limit, 0);
+    const rows = await ProductRepository.findMany({ categoryId, offersOpenAt: now() }, "newest", limit, 0);
     return rows.map((row) => toCard(row, locale));
   },
 
@@ -141,7 +154,7 @@ export const CatalogService = {
       categoryId = category.id;
     }
 
-    const filter = { q: query.q, categoryId, type: query.type };
+    const filter = { q: query.q, categoryId, type: query.type, offersOpenAt: now() };
     const [rows, total] = await Promise.all([
       ProductRepository.findMany(filter, query.sort ?? "newest", PAGE_SIZE, (page - 1) * PAGE_SIZE),
       ProductRepository.count(filter),
@@ -169,12 +182,12 @@ export const CatalogService = {
 
   // Every product a visitor can open, for sitemap.xml.
   allForSitemap: async () => {
-    const rows = await ProductRepository.findMany({}, "newest", 5000, 0);
+    const rows = await ProductRepository.findMany({ offersOpenAt: now() }, "newest", 5000, 0);
     return rows.map((row) => ({ slug: row.slug, updatedAt: row.updatedAt, images: row.images.map((image) => image.url) }));
   },
 
   related: async (productId: string, categoryId: string | null, limit: number, locale: Locale) => {
-    const rows = await ProductRepository.findMany(categoryId ? { categoryId } : {}, "newest", limit + 1, 0);
+    const rows = await ProductRepository.findMany({ ...(categoryId && { categoryId }), offersOpenAt: now() }, "newest", limit + 1, 0);
     return rows.filter((row) => row.id !== productId).slice(0, limit).map((row) => toCard(row, locale));
   },
 
@@ -207,7 +220,8 @@ export const CatalogService = {
         type: product.type,
         imageUrl: variant?.imageUrl ?? product.images[0]?.url ?? null,
         stock,
-        available: valid && (stock === null || stock > 0),
+        available: valid && (stock === null || stock > 0) && !offerEnded(product),
+        aliexpressPick: product.aliexpressPick,
       });
     }
 

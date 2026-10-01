@@ -75,3 +75,15 @@ export async function uploadShipmentImageAction(form: FormData) {
     return await ShipmentService.uploadImage(new Uint8Array(await file.arrayBuffer()));
   });
 }
+
+// AliExpress picks: turns a paid order into a shipment (tracking page) and posts the link in its chat.
+export async function createTrackingFromOrderAction(orderId: string) {
+  await requireRole(...TEAM);
+
+  return await safely(async () => {
+    const created = await ShipmentService.createFromOrder(String(orderId));
+    refresh();
+    revalidatePath(`/admin/orders/${orderId}`);
+    return created;
+  });
+}
