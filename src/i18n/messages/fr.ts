@@ -353,6 +353,8 @@ export const fr: Messages = {
     manage: "Gérer dans l'admin →",
     questions: "Une question sur cette commande ? Les commandes passées avec un compte disposent d'un chat privé avec nous.",
     logIn: "Connexion",
+    help: "Besoin d'aide ?",
+    helpText: "Un souci avec le chat ? Écrivez-nous directement :",
     items: "Articles",
     editReview: "Modifier votre avis",
     rateItem: "Noter cet article →",

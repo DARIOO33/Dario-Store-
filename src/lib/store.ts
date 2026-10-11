@@ -13,10 +13,10 @@ export function siteUrl() {
 export const META_PIXEL_ID = "1102753785554679";
 
 export const CONTACT = {
-  instagram: "dario.store.tn",
-  facebook: "",
+  instagram: "dario_store_tn",
+  facebook: "Dario.Store.Tn",
   // International format without spaces or "+", e.g. 21651099580
-  whatsapp: "",
+  whatsapp: "21651099580",
   email: "",
 };
 

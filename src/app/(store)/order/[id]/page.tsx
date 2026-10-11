@@ -16,6 +16,7 @@ import { formatDateTime } from "@/src/lib/time";
 import { getT, pageTitle } from "@/src/i18n/server";
 import { isTeam } from "@/src/lib/roles";
 import { ShipmentService } from "@/src/services/shipments";
+import ContactLinks from "@/src/components/layout/ContactLinks";
 
 export const dynamic = "force-dynamic";
 export const generateMetadata = pageTitle("order.title");
@@ -144,6 +145,12 @@ export default async function OrderPage({ params, searchParams }: Props) {
               <p className="muted">{t("order.digitalNothing")}</p>
             )}
             {order.notes && <p style={{ marginTop: "0.8rem" }}><strong>{t("order.note")}</strong> {order.notes}</p>}
+          </section>
+
+          <section className="panel">
+            <h2>{t("order.help")}</h2>
+            <p className="muted">{t("order.helpText")}</p>
+            <ContactLinks className="orderContact" />
           </section>
 
           {order.status === "PENDING" && <CancelOrderButton orderId={order.id} token={sp.t ?? null} />}

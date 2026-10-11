@@ -355,6 +355,8 @@ export const en = {
     manage: "Manage in admin →",
     questions: "Questions about this order? Orders placed with an account get a private chat with us.",
     logIn: "Log in",
+    help: "Need help?",
+    helpText: "Trouble with the chat? Message us directly:",
     items: "Items",
     editReview: "Edit your review",
     rateItem: "Rate this item →",
