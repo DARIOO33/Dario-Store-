@@ -16,7 +16,7 @@ export async function openChatAction(orderId: string, asAdmin: boolean) {
   return await safely(() => MessageService.open(String(orderId), user, asAdmin === true));
 }
 
-// The form carries `text` and, optionally, a photo in `image`.
+// The form carries `text` and, optionally, a photo in `image`, `sensitive` and the team's `notify` box.
 export async function sendChatMessageAction(orderId: string, asAdmin: boolean, form: FormData) {
   const user = await getCurrentUser();
   const text = form.get("text");
@@ -32,7 +32,8 @@ export async function sendChatMessageAction(orderId: string, asAdmin: boolean, f
     }
 
     const sensitive = form.get("sensitive") === "true";
-    const result = await MessageService.send(String(orderId), user, asAdmin === true, typeof text === "string" ? text : "", image, sensitive);
+    const emailCustomer = form.get("notify") === "true";
+    const result = await MessageService.send(String(orderId), user, asAdmin === true, typeof text === "string" ? text : "", image, sensitive, emailCustomer);
     revalidatePath("/admin", "layout");
     return result;
   });

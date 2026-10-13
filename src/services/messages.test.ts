@@ -13,13 +13,15 @@ vi.mock("../prisma/messages", () => ({
     countSince: vi.fn(),
     markRead: vi.fn(),
     findUnread: vi.fn(),
+    findWaitingForTeam: vi.fn(),
+    markTeamEmailed: vi.fn(),
   },
 }));
 vi.mock("../prisma/orders", () => ({
   OrderRepository: { findById: vi.fn(), listForUser: vi.fn(), setChatClosed: vi.fn(), reopenForProblem: vi.fn() },
 }));
 vi.mock("./reviews", () => ({ ReviewService: { forOrderChat: vi.fn() } }));
-vi.mock("./order-notifications", () => ({ OrderNotifications: { problemReported: vi.fn(), customerMessage: vi.fn() } }));
+vi.mock("./order-notifications", () => ({ OrderNotifications: { problemReported: vi.fn(), customerMessages: vi.fn(), storeMessage: vi.fn() } }));
 vi.mock("./chat-images", () => ({
   ChatImages: { save: vi.fn(), load: vi.fn(), remove: vi.fn() },
 }));
@@ -429,7 +431,10 @@ describe("'Report a problem' on a chat the store closed", () => {
     await MessageService.reportProblem("order-1", customer, "NOT_WORKING", "  Le compte ne marche plus\r\n ");
 
     expect(orders.reopenForProblem).toHaveBeenCalledWith("order-1", expect.any(Temporal.Instant));
-    expect(messages.create).toHaveBeenCalledWith({ orderId: "order-1", fromAdmin: false, senderUserId: customer.id, body: "Problème signalé : Ça ne fonctionne pas\nLe compte ne marche plus", hasImage: false });
+    expect(messages.create).toHaveBeenCalledWith({ orderId: "order-1", fromAdmin: false, senderUserId: customer.id, body: "Problème signalé : Ça ne fonctionne pas\nLe compte ne marche plus", hasImage: false,
+      // Its own email goes out right away, so the "unread message" email skips it.
+      teamEmailedAt: expect.any(Temporal.Instant),
+    });
     expect(notifications.problemReported).toHaveBeenCalledWith(current, "It doesn't work");
   });
 
@@ -470,32 +475,58 @@ describe("'Report a problem' on a chat the store closed", () => {
   });
 });
 
-describe("emailing the team about customer messages", () => {
-  it("emails the team for the first message they haven't read yet", async () => {
-    messages.findUnread.mockResolvedValue([{ orderId: "order-1" }] as never);
+describe("emailing the team about customer messages nobody opened", () => {
+  const waiting = (id: string, orderId: string, hasImage = false) => ({ id, orderId, hasImage });
+
+  it("sends nothing at the moment the customer writes", async () => {
     await MessageService.send("order-1", customer, false, "Is my key ready?");
-
-    expect(messages.findUnread).toHaveBeenCalledWith(false, ["order-1"]);
-    expect(notifications.customerMessage).toHaveBeenCalledWith(expect.objectContaining({ id: "order-1" }), false);
+    expect(notifications.customerMessages).not.toHaveBeenCalled();
   });
 
-  it("says when the message came with a photo (a payment proof)", async () => {
-    messages.findUnread.mockResolvedValue([{ orderId: "order-1" }] as never);
-    await MessageService.send("order-1", customer, false, "", { bytes: PNG });
-    expect(notifications.customerMessage).toHaveBeenCalledWith(expect.anything(), true);
+  it("looks at messages older than 5 minutes (and younger than a day)", async () => {
+    messages.findWaitingForTeam.mockResolvedValue([]);
+    const before = Temporal.Now.instant();
+    await expect(MessageService.emailTeamAboutWaiting()).resolves.toBe(0);
+
+    const [from, until] = messages.findWaitingForTeam.mock.calls[0]!;
+    expect(before.since(until).total("minutes")).toBeCloseTo(5, 1);
+    expect(before.since(from).total("hours")).toBeCloseTo(24, 1);
+    expect(notifications.customerMessages).not.toHaveBeenCalled();
   });
 
-  it("does not email again while earlier messages are still unread", async () => {
-    messages.findUnread.mockResolvedValue([{ orderId: "order-1" }, { orderId: "order-1" }] as never);
-    await MessageService.send("order-1", customer, false, "Hello again?");
-    expect(notifications.customerMessage).not.toHaveBeenCalled();
+  it("sends one email per order, counting its messages and saying when there is a photo", async () => {
+    messages.findWaitingForTeam.mockResolvedValue([waiting("m1", "order-1"), waiting("m2", "order-1", true), waiting("m3", "order-2")]);
+    messages.markTeamEmailed.mockResolvedValue(1);
+    orders.findById.mockImplementation(async (id) => order({ id }));
+
+    await expect(MessageService.emailTeamAboutWaiting()).resolves.toBe(2);
+
+    expect(messages.markTeamEmailed).toHaveBeenCalledWith(["m1", "m2"], expect.anything());
+    expect(notifications.customerMessages).toHaveBeenCalledWith(expect.objectContaining({ id: "order-1" }), 2, true);
+    expect(notifications.customerMessages).toHaveBeenCalledWith(expect.objectContaining({ id: "order-2" }), 1, false);
   });
 
-  it("never emails the team about its own messages", async () => {
-    messages.findUnread.mockResolvedValue([{ orderId: "order-1" }] as never);
-    await MessageService.send("order-1", staff, true, "On it!");
-    await MessageService.send("order-1", admin, true, "Done.");
-    expect(notifications.customerMessage).not.toHaveBeenCalled();
+  it("[fixed] does not email twice when another run already announced the messages", async () => {
+    messages.findWaitingForTeam.mockResolvedValue([waiting("m1", "order-1")]);
+    messages.markTeamEmailed.mockResolvedValue(0);
+
+    await expect(MessageService.emailTeamAboutWaiting()).resolves.toBe(0);
+    expect(notifications.customerMessages).not.toHaveBeenCalled();
+  });
+});
+
+describe("emailing the customer about a store message", () => {
+  it("emails them only when the team ticked the box", async () => {
+    await MessageService.send("order-1", admin, true, "Your key is ready.");
+    expect(notifications.storeMessage).not.toHaveBeenCalled();
+
+    await MessageService.send("order-1", staff, true, "Your key is ready.", undefined, false, true);
+    expect(notifications.storeMessage).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: "order-1" }));
+  });
+
+  it("[fixed] a customer can't make the shop email them by sending the box themselves", async () => {
+    await MessageService.send("order-1", customer, false, "Hello", undefined, false, true);
+    expect(notifications.storeMessage).not.toHaveBeenCalled();
   });
 });
 

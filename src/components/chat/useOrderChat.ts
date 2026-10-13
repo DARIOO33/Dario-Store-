@@ -51,7 +51,7 @@ export function useOrderChat(orderId: string, asAdmin: boolean) {
 
   // Sends a message; returns it when the server accepted it, or null (with
   // `error` set) when it didn't.
-  const send = async (text: string, photo: File | null, sensitive: boolean) => {
+  const send = async (text: string, photo: File | null, sensitive: boolean, emailCustomer: boolean) => {
     setBusy(true);
     setError("");
 
@@ -59,6 +59,7 @@ export function useOrderChat(orderId: string, asAdmin: boolean) {
     form.set("text", text);
     if (photo) form.set("image", photo);
     if (sensitive) form.set("sensitive", "true");
+    if (emailCustomer) form.set("notify", "true");
 
     const result = await sendChatMessageAction(orderId, asAdmin, form);
     setBusy(false);

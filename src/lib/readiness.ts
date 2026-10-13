@@ -24,6 +24,7 @@ export function readinessChecks(): Check[] {
     { ok: !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET, label: "Google sign-in", fix: "Set GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET, and add https://your-domain/api/auth/callback/google in Google Cloud." },
     { ok: key, label: "Chat encryption", fix: "Set CHAT_ENCRYPTION_KEY (32 bytes, base64) — the SAME key as before, or old chats become unreadable." },
     { ok: emailConfigured(), label: "Email (SMTP)", fix: "Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS and MAIL_FROM — without it no sign-up codes or order emails are sent." },
+    { ok: (process.env.CRON_SECRET ?? "").length >= 16, label: "Unread chat emails", fix: "Set CRON_SECRET (openssl rand -hex 32) and have a scheduler call /api/cron/chat-emails every minute with it — without it the team gets no email about unread customer messages." },
     { ok: cloudinaryConfigured(), label: "Images (Cloudinary)", fix: "Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET." },
     { ok: AVAILABLE_ONLINE_METHODS.length >= 1, label: `Payment methods (${AVAILABLE_ONLINE_METHODS.join(", ") || "none"})`, fix: "Fill in real account details in src/lib/payments.ts; methods with example values are hidden." },
     { ok: !!(CONTACT.instagram || CONTACT.whatsapp || CONTACT.email), label: "Contact channels", fix: "Fill CONTACT in src/lib/store.ts." },

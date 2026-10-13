@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'8eae8f045f89101319bf53d0a0942b3717e606915a664152aefe3671d2535432'>;
+  StorageHashBase<'ee9602679185a71fa1a64b6323eba282a4bf519599d1f823a332fdb7067cedf8'>;
 export type ExecutionHash =
   ExecutionHashBase<'42a13e7e80e40dfb70cde6d78096999f57a9fe555cccad965785e499b3108665'>;
 export type ProfileHash =
@@ -334,6 +334,7 @@ export type FieldOutputTypes = {
       readonly sensitive: CodecTypes['pg/bool@1']['output'];
       readonly wipedAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
       readonly readAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
+      readonly teamEmailedAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
       readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
     };
     readonly Product: {
@@ -605,6 +606,7 @@ export type FieldInputTypes = {
       readonly sensitive: CodecTypes['pg/bool@1']['input'];
       readonly wipedAt: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
       readonly readAt: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
+      readonly teamEmailedAt: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
       readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
     };
     readonly Product: {
@@ -876,6 +878,7 @@ export type StorageColumnTypes = {
       readonly readAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
       readonly senderUserId: CodecTypes['pg/text@1']['output'] | null;
       readonly sensitive: CodecTypes['pg/bool@1']['output'];
+      readonly teamEmailedAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
       readonly wipedAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
     };
     readonly product: {
@@ -1147,6 +1150,7 @@ export type StorageColumnInputTypes = {
       readonly readAt: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
       readonly senderUserId: CodecTypes['pg/text@1']['input'] | null;
       readonly sensitive: CodecTypes['pg/bool@1']['input'];
+      readonly teamEmailedAt: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
       readonly wipedAt: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
     };
     readonly product: {
@@ -1493,6 +1497,7 @@ export namespace Models {
     sensitive: CodecTypes['pg/bool@1']['output'];
     wipedAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
     readAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
+    teamEmailedAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
     createdAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
     image: public_MessageImage | null;
     order: public_Order;
@@ -2344,6 +2349,11 @@ type ContractBase = Omit<
                   readonly nullable: true;
                 };
                 readonly readAt: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                  readonly nullable: true;
+                };
+                readonly teamEmailedAt: {
                   readonly nativeType: 'timestamptz';
                   readonly codecId: 'pg/timestamptz-temporal@1';
                   readonly nullable: true;
@@ -4270,6 +4280,13 @@ type ContractBase = Omit<
                   readonly codecId: 'pg/timestamptz-temporal@1';
                 };
               };
+              readonly teamEmailedAt: {
+                readonly nullable: true;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                };
+              };
               readonly createdAt: {
                 readonly nullable: false;
                 readonly type: {
@@ -4326,6 +4343,7 @@ type ContractBase = Omit<
                 readonly sensitive: { readonly column: 'sensitive' };
                 readonly wipedAt: { readonly column: 'wipedAt' };
                 readonly readAt: { readonly column: 'readAt' };
+                readonly teamEmailedAt: { readonly column: 'teamEmailedAt' };
                 readonly createdAt: { readonly column: 'createdAt' };
               };
             };

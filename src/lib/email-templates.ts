@@ -140,6 +140,21 @@ export function paymentConfirmedEmail(data: OrderEmailData & { fulfilment: strin
   };
 }
 
+/* ---------- 2b. new chat message from the store (when the team asks for it) ---------- */
+
+// The message itself stays in the encrypted chat: the email only says there is one.
+export function chatMessageEmail(data: OrderEmailData): Email {
+  const t = createTranslator(data.locale);
+  const number = data.orderNumber;
+  const body = `${paragraph(t("email.hello", { name: data.name }))}${paragraph(t("email.chatBody"))}`;
+
+  return {
+    subject: t("email.chatSubject", { number }),
+    html: frame({ t, footer: orderFooter(t, number), kicker: t("email.chatKicker"), title: t("email.chatTitle"), intro: t("email.chatIntro", { number }), body, button: viewOrder(t, data.orderUrl) }),
+    text: [t("email.hello", { name: data.name }), t("email.chatIntro", { number }), t("email.chatBody"), `${t("email.viewOrder")}: ${data.orderUrl}`].join("\n\n"),
+  };
+}
+
 /* ---------- 3. delivery (sent by the admin) ---------- */
 
 export function deliveryEmail(data: OrderEmailData & { message: string }): Email {

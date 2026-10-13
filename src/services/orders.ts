@@ -433,7 +433,7 @@ export const OrderService = {
 
     // Two clicks at the same moment both pass the checks above; only the first one changes the payment.
     if (!(await OrderRepository.changePaymentStatus(id, ["PENDING", "FAILED"], "SUBMITTED", now()))) throw userError("errors.alreadyPaid");
-    await MessageRepository.create({ orderId: id, fromAdmin: false, senderUserId: viewer.id, body: createTranslator(locale)("chatSystem.paymentSent"), hasImage: false });
+    await MessageRepository.create({ orderId: id, fromAdmin: false, senderUserId: viewer.id, body: createTranslator(locale)("chatSystem.paymentSent"), hasImage: false, teamEmailedAt: now() });
     runAfterResponse(() => OrderNotifications.paymentSent(order));
   },
 

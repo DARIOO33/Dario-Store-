@@ -304,6 +304,8 @@ model OrderMessage {
   sensitive Boolean      @default(false)
   wipedAt   Timestamptz?
   readAt    Timestamptz?
+  // A customer message: when the team was emailed that it is still waiting (see MessageService.emailTeamAboutWaiting).
+  teamEmailedAt Timestamptz?
   createdAt Timestamptz  @default(now())
 
   order  Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)

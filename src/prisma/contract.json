@@ -1260,6 +1260,13 @@
                   "kind": "scalar"
                 }
               },
+              "teamEmailedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
               "wipedAt": {
                 "nullable": true,
                 "type": {
@@ -1346,6 +1353,9 @@
                 },
                 "sensitive": {
                   "column": "sensitive"
+                },
+                "teamEmailedAt": {
+                  "column": "teamEmailedAt"
                 },
                 "wipedAt": {
                   "column": "wipedAt"
@@ -4017,6 +4027,11 @@
                   "nativeType": "bool",
                   "nullable": false
                 },
+                "teamEmailedAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
                 "wipedAt": {
                   "codecId": "pg/timestamptz-temporal@1",
                   "nativeType": "timestamptz",
@@ -5665,7 +5680,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "8eae8f045f89101319bf53d0a0942b3717e606915a664152aefe3671d2535432"
+    "storageHash": "ee9602679185a71fa1a64b6323eba282a4bf519599d1f823a332fdb7067cedf8"
   },
   "execution": {
     "executionHash": "42a13e7e80e40dfb70cde6d78096999f57a9fe555cccad965785e499b3108665",

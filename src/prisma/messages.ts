@@ -25,7 +25,8 @@ export const MessageRepository = {
   },
 
   // `senderUserId` is empty for the messages the shop writes by itself.
-  create: async (data: { orderId: string; fromAdmin: boolean; senderUserId?: string | null; body: string; hasImage: boolean; sensitive?: boolean }) => {
+  // `teamEmailedAt` is set right away when the team is told about the message some other way.
+  create: async (data: { orderId: string; fromAdmin: boolean; senderUserId?: string | null; body: string; hasImage: boolean; sensitive?: boolean; teamEmailedAt?: Temporal.Instant }) => {
     const created = await db.orm.public.OrderMessage.create({ ...data, body: sealText(data.body) });
     return decrypted(created);
   },
@@ -85,6 +86,24 @@ export const MessageRepository = {
     return await db.orm.public.OrderMessage.where({ orderId, fromAdmin: !readerIsAdmin })
       .where((m) => m.readAt.isNull())
       .updateAndCount({ readAt: at });
+  },
+
+  // Customer messages written between `from` and `until` that the team has neither opened nor been emailed about.
+  findWaitingForTeam: async (from: Temporal.Instant, until: Temporal.Instant) => {
+    const rows = await db.orm.public.OrderMessage.where({ fromAdmin: false })
+      .where((m) => m.readAt.isNull())
+      .where((m) => m.teamEmailedAt.isNull())
+      .where((m) => m.createdAt.gte(from))
+      .where((m) => m.createdAt.lte(until))
+      .all();
+    return rows.map((row) => ({ id: row.id, orderId: row.orderId, hasImage: row.hasImage }));
+  },
+
+  // Returns how many were newly marked: 0 means another run already emailed the team about them.
+  markTeamEmailed: async (ids: string[], at: Temporal.Instant) => {
+    return await db.orm.public.OrderMessage.where((m) => m.id.in(ids))
+      .where((m) => m.teamEmailedAt.isNull())
+      .updateAndCount({ teamEmailedAt: at });
   },
 
   findUnread: async (fromAdmin: boolean, orderIds?: string[]) => {

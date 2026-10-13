@@ -5,7 +5,7 @@ import { MessageRepository } from "../prisma/messages";
 import { OrderRepository } from "../prisma/orders";
 import { UserError, userError } from "../lib/result";
 import { now } from "../lib/time";
-import { PROBLEM_REPORT_DAYS, SENSITIVE_MESSAGE_DAYS } from "../lib/store";
+import { CHAT_EMAIL_AFTER_MINUTES, PROBLEM_REPORT_DAYS, SENSITIVE_MESSAGE_DAYS } from "../lib/store";
 import { isProblemReason } from "../lib/problems";
 import { OrderNotifications } from "./order-notifications";
 import { runAfterResponse } from "../lib/background";
@@ -170,7 +170,8 @@ export const MessageService = {
     return { messages: messages.map((message) => toChat(message, access.asAdmin)), closed: closure !== null, closure, payment, review, problemReport, canClose };
   },
 
-  send: async (orderId: string, viewer: Viewer, asAdmin: boolean, text: string, image?: { bytes: Uint8Array }, sensitive = false) => {
+  // `emailCustomer` is the team's "Email the customer" box: the customer gets a link to the chat, never the text.
+  send: async (orderId: string, viewer: Viewer, asAdmin: boolean, text: string, image?: { bytes: Uint8Array }, sensitive = false, emailCustomer = false) => {
     const access = await accessFor(orderId, viewer, asAdmin);
     if (!access) throw userError("errors.writeDenied");
     const closure = closureOf(access.order);
@@ -197,13 +198,33 @@ export const MessageService = {
     const message = await MessageRepository.create({ orderId, fromAdmin: access.asAdmin, senderUserId: viewer!.id, body, hasImage: !!image, sensitive });
     if (image && mimeType) await ChatImages.save(message.id, { bytes: image.bytes, mimeType });
 
-    // The team hears about a customer's message by email, once per unread batch: only when this is
-    // the only customer message they haven't read yet.
-    if (!access.asAdmin && (await MessageRepository.findUnread(false, [orderId])).length === 1) {
-      runAfterResponse(() => OrderNotifications.customerMessage(access.order, !!image));
-    }
+    // A customer's message is emailed to the team later, if nobody opened it (emailTeamAboutWaiting).
+    if (access.asAdmin && emailCustomer) runAfterResponse(() => OrderNotifications.storeMessage(access.order));
 
     return { message: toChat({ ...message, sender: access.asAdmin ? { name: viewer!.name ?? "" } : null }, access.asAdmin) };
+  },
+
+  // Run every minute by /api/cron/chat-emails. Customer messages nobody on the team has opened
+  // CHAT_EMAIL_AFTER_MINUTES after they were written are emailed to the team: one email per order, and
+  // each message is announced once. Messages older than a day are left alone.
+  emailTeamAboutWaiting: async () => {
+    const current = now();
+    const waiting = await MessageRepository.findWaitingForTeam(current.subtract({ hours: 24 }), current.subtract({ minutes: CHAT_EMAIL_AFTER_MINUTES }));
+
+    const byOrder = new Map<string, typeof waiting>();
+    for (const message of waiting) byOrder.set(message.orderId, [...(byOrder.get(message.orderId) ?? []), message]);
+
+    let emails = 0;
+    for (const [orderId, messages] of byOrder) {
+      // Marked before sending, so two runs at the same moment can't both email.
+      const marked = await MessageRepository.markTeamEmailed(messages.map((message) => message.id), current);
+      const order = marked > 0 ? await OrderRepository.findById(orderId) : null;
+      if (!order) continue;
+
+      await OrderNotifications.customerMessages(order, messages.length, messages.some((message) => message.hasImage));
+      emails += 1;
+    }
+    return emails;
   },
 
   // The team's "Close chat" / "Reopen chat" button. The customer is told in the chat, in their language.
@@ -244,7 +265,7 @@ export const MessageService = {
 
     const t = createTranslator(toLocale(order.locale));
     const label = t.messages.chat.problemReasons[reason];
-    await MessageRepository.create({ orderId, fromAdmin: false, senderUserId: viewer!.id, body: `${t("chatSystem.problemReported", { reason: label })}\n${body}`, hasImage: false });
+    await MessageRepository.create({ orderId, fromAdmin: false, senderUserId: viewer!.id, body: `${t("chatSystem.problemReported", { reason: label })}\n${body}`, hasImage: false, teamEmailedAt: now() });
     runAfterResponse(() => OrderNotifications.problemReported(order, createTranslator("en").messages.chat.problemReasons[reason]));
   },
 

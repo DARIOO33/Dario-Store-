@@ -50,6 +50,7 @@ Run `npm run check:ready` (the same list is printed in the server log at every s
 | `SMTP_*`, `MAIL_FROM` | **Required**: without email, customers can't finish email sign-up (they need the 6-digit code), reset a password or get order emails. |
 | `CLOUDINARY_*` | Product photo uploads and private chat photos. |
 | `ADMIN_NOTIFY_EMAIL` (optional) | Admin addresses for the team emails (new order, payment sent, new chat message, problem reported); default: every admin account. Staff accounts always get them too. |
+| `CRON_SECRET` | Protects `/api/cron/chat-emails`, the every-minute job that emails the team about customer chat messages nobody has opened after 5 minutes. The scheduler sends it as `Authorization: Bearer …`. |
 
 Also before the first real order:
 
@@ -218,8 +219,9 @@ Defined in [src/prisma/contract.prisma](src/prisma/contract.prisma). The better-
   page is built by `ShipmentService.getPublic`, which returns the name, phone and address **already masked**
   (`src/lib/mask.ts`; the `*` runs are then smudged with CSS blur) — the real details, the internal notes, the
   AliExpress link and the contact channel never reach a visitor's browser. Tracking pages are `noindex`.
-- **Team alerts by email:** a new order, a customer tapping "Payment sent", a new customer message in an order chat
-  (one email per unread batch, without the text) and "Report a problem" each email the team: the admins
+- **Team alerts by email:** a new order, a customer tapping "Payment sent", a customer chat message nobody
+  opened after 5 minutes (one email per order, without the text; needs a scheduler calling `/api/cron/chat-emails`
+  every minute with `CRON_SECRET`) and "Report a problem" each email the team: the admins
   (`ADMIN_NOTIFY_EMAIL` in `.env`, comma-separated; empty = every admin account) plus every staff account.
   Sent only once SMTP is set up.
 - **Order stages in the chat:** once an order is Paid / Shipped / Delivered, the banner above the chat shows that stage

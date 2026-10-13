@@ -20,6 +20,8 @@ export default function OrderChat({ orderId, asAdmin }: { orderId: string; asAdm
   const { photo, preview, pick, clear: clearPhoto } = usePhotoAttachment(chat.setError);
   const [text, setText] = useState("");
   const [sensitive, setSensitive] = useState(false);
+  // The team's "Email the customer" box: one email per ticked message, so it unticks itself after sending.
+  const [emailCustomer, setEmailCustomer] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   // Follow new messages only while the reader is already at the bottom.
@@ -40,11 +42,12 @@ export default function OrderChat({ orderId, asAdmin }: { orderId: string; asAdm
   const send = async () => {
     if (chat.busy || (!text.trim() && !photo)) return;
 
-    const message = await chat.send(text, photo, sensitive);
+    const message = await chat.send(text, photo, sensitive, emailCustomer);
     if (!message) return;
 
     setText("");
     setSensitive(false);
+    setEmailCustomer(false);
     clearPhoto();
     stickToBottom.current = true;
     chat.appendMessage(message);
@@ -166,6 +169,15 @@ export default function OrderChat({ orderId, asAdmin }: { orderId: string; asAdm
               <span className="hint"> — {t("chat.sensitiveHint", { days: SENSITIVE_MESSAGE_DAYS })}</span>
             </span>
           </label>
+          {asAdmin && (
+            <label className="check chatSecret">
+              <input type="checkbox" checked={emailCustomer} onChange={(e) => setEmailCustomer(e.target.checked)} />
+              <span>
+                {t("chat.notifyLabel")}
+                <span className="hint"> — {t("chat.notifyHint")}</span>
+              </span>
+            </label>
+          )}
         </form>
       )}
       {chat.error && <p className="error" role="alert">{chat.error}</p>}

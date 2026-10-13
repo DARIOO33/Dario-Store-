@@ -111,8 +111,14 @@ npm run seed:store     # demo catalogue
 - SEO: product/category pages set a canonical URL and JSON-LD (`lib/seo.ts`, `components/seo/JsonLd.tsx`). A page
   that sets its own `openGraph` must repeat `siteName` and `images` (it replaces the root one).
 - Team emails (new order, payment sent, new customer chat message, problem reported) go to `teamAddresses()` in
-  `order-notifications.ts`: the admins (`ADMIN_NOTIFY_EMAIL` or every ADMIN account) plus every STAFF account. The
-  chat-message email is sent once per unread batch and never contains the message text.
+  `order-notifications.ts`: the admins (`ADMIN_NOTIFY_EMAIL` or every ADMIN account) plus every STAFF account.
+- Chat emails never contain the message text. A customer message nobody on the team opened after
+  `CHAT_EMAIL_AFTER_MINUTES` (lib/store.ts, 5) is emailed to the team by `MessageService.emailTeamAboutWaiting`: one
+  email per order, each message once (`OrderMessage.teamEmailedAt`). It only runs when a scheduler calls
+  `GET /api/cron/chat-emails` every minute with `Authorization: Bearer $CRON_SECRET`. A customer message that already
+  has its own team email (payment sent, problem reported) is created with `teamEmailedAt` set. The other way round, the
+  team's "Email the customer about this message" box in the chat sends `OrderNotifications.storeMessage` (one email
+  per ticked message).
 - Any screen that tells the customer "we sent you an email / a code" also tells them to check their spam folder
   (`src/i18n/email-notes.test.ts` checks the known texts; add a new one there).
 - Delivery details typed by the admin are emailed only — never store them in the database or repeat them in the chat.

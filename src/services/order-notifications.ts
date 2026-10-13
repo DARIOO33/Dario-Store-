@@ -6,12 +6,12 @@ import { MessageRepository } from "../prisma/messages";
 import { OrderRepository } from "../prisma/orders";
 import { sendEmail } from "../lib/email";
 import { runAfterResponse } from "../lib/background";
-import { adminAlertEmail, adminNewOrderEmail, deliveryEmail, orderReceivedEmail, paymentConfirmedEmail } from "../lib/email-templates";
+import { adminAlertEmail, adminNewOrderEmail, chatMessageEmail, deliveryEmail, orderReceivedEmail, paymentConfirmedEmail } from "../lib/email-templates";
 import { paymentLabel } from "../lib/payments";
 import { formatMillimes } from "../lib/money";
 import { UserRepository } from "../prisma/users";
 import { maskEmail } from "../lib/mask";
-import { siteUrl } from "../lib/store";
+import { CHAT_EMAIL_AFTER_MINUTES, siteUrl } from "../lib/store";
 import { formatBackAt, formatResponseTime } from "../lib/availability";
 import { AvailabilityService } from "./availability";
 import { createTranslator } from "../i18n/translate";
@@ -99,19 +99,26 @@ export const OrderNotifications = {
     await sendEmail({ to: to.join(", "), ...email });
   },
 
-  // The customer wrote in the order chat. Sent for the first message the team hasn't read yet (see
-  // MessageService.send), so a burst of messages is one email. The text stays in the encrypted chat.
-  customerMessage: async (order: OrderRow, withPhoto: boolean) => {
+  // The customer wrote in the order chat and nobody on the team opened it in time (see
+  // MessageService.emailTeamAboutWaiting). The text stays in the encrypted chat.
+  customerMessages: async (order: OrderRow, count: number, withPhoto: boolean) => {
     const to = await teamAddresses();
     if (to.length === 0) return;
 
+    const what = count === 1 ? "a message" : `${count} messages`;
     const email = adminAlertEmail({
-      kicker: "New message",
-      title: `Order #${order.orderNumber}: new message`,
-      intro: `${order.customerName} wrote in the order chat${withPhoto ? " and sent a photo" : ""}. Open the order to answer.`,
+      kicker: "Unread message",
+      title: `Order #${order.orderNumber}: ${count === 1 ? "unread message" : `${count} unread messages`}`,
+      intro: `${order.customerName} wrote ${what} in the order chat${withPhoto ? " (with a photo)" : ""} more than ${CHAT_EMAIL_AFTER_MINUTES} minutes ago and nobody has opened it yet. Open the order to answer.`,
       adminUrl: `${siteUrl()}/admin/orders/${order.id}`,
     });
     await sendEmail({ to: to.join(", "), ...email });
+  },
+
+  // The team answered in the chat and ticked "Email the customer": a link to the chat, without the text.
+  storeMessage: async (order: OrderRow) => {
+    const email = chatMessageEmail({ locale: toLocale(order.locale), name: order.customerName, orderNumber: order.orderNumber, orderUrl: orderUrl(order) });
+    await sendEmail({ to: order.customerEmail, ...email });
   },
 
   // The customer reopened a closed chat with "Report a problem". The message itself stays in the
