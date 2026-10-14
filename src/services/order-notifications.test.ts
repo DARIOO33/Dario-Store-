@@ -34,8 +34,11 @@ const order = {
 // The email(s) sent to the team (not the customer's own confirmation).
 const teamEmails = () => send.mock.calls.map(([email]) => email).filter((email) => email.to !== "zz-sami@example.tn");
 
+const text = (body: string) => ({ body, hasImage: false, sensitive: false });
+
 beforeEach(() => {
   send.mockClear();
+  vi.stubEnv("BETTER_AUTH_URL", "https://shop.example/");
   users.findAdmins.mockResolvedValue([{ email: "owner@shop.tn" }] as never);
   users.findStaff.mockResolvedValue([{ email: "yasmine@shop.tn" }, { email: "Owner@Shop.tn" }] as never);
 });
@@ -43,7 +46,7 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("who gets the team emails", () => {
   it("admins and staff, each address once", async () => {
-    await OrderNotifications.customerMessages(order, 1, false);
+    await OrderNotifications.customerMessages(order, [text("Hello?")]);
     expect(teamEmails()).toEqual([expect.objectContaining({ to: "owner@shop.tn, yasmine@shop.tn" })]);
   });
 
@@ -58,7 +61,7 @@ describe("who gets the team emails", () => {
   it("sends nothing when there is nobody to tell", async () => {
     users.findAdmins.mockResolvedValue([]);
     users.findStaff.mockResolvedValue([]);
-    await OrderNotifications.customerMessages(order, 1, false);
+    await OrderNotifications.customerMessages(order, [text("Hello?")]);
     expect(send).not.toHaveBeenCalled();
   });
 });
@@ -72,20 +75,38 @@ describe("the team emails", () => {
     expect(teamEmails()).toEqual([expect.objectContaining({ to: "owner@shop.tn, yasmine@shop.tn", subject: expect.stringContaining("New order #42") })]);
   });
 
-  it("unread customer messages: links to the order, counts them, mentions a photo, never includes the message text", async () => {
-    await OrderNotifications.customerMessages(order, 2, true);
+  it("unread customer messages: shows what the customer wrote and links to the order", async () => {
+    await OrderNotifications.customerMessages(order, [text("Is my key ready?\nI paid an hour ago"), { body: "", hasImage: true, sensitive: false }]);
     const [email] = teamEmails();
 
     expect(email!.subject).toBe("Order #42: 2 unread messages");
-    expect(email!.text).toContain("Sami Ben Ali wrote 2 messages in the order chat (with a photo) more than 5 minutes ago");
-    expect(email!.text).toContain("/admin/orders/order-1");
+    expect(email!.text).toContain("> Is my key ready?\n> I paid an hour ago");
+    expect(email!.html).toContain("Is my key ready?<br>I paid an hour ago");
+    expect(email!.text).toContain("[Photo: open the chat to see it]");
+    expect(email!.text).toContain("https://shop.example/admin/orders/order-1");
   });
 
-  it("store message: the customer gets a link to their order in their language, not the team", async () => {
-    await OrderNotifications.storeMessage({ ...(order as object), locale: "fr" } as never);
+  it("[fixed] login details are never emailed, to the team or to the customer", async () => {
+    const secret = { body: "login: sami / pass: hunter2", hasImage: false, sensitive: true };
+    await OrderNotifications.customerMessages(order, [secret]);
+    await OrderNotifications.storeMessage(order, secret);
+
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(JSON.stringify(send.mock.calls)).not.toContain("hunter2");
+    expect(send.mock.calls[1]![0].text).toContain("not shown in this email");
+  });
+
+  it("[fixed] a message can't inject HTML into the email", async () => {
+    await OrderNotifications.storeMessage(order, text('<img src=x onerror="alert(1)">'));
+    expect(send.mock.calls[0]![0].html).not.toContain("<img");
+  });
+
+  it("store message: the customer gets the text and a link to their order, in their language", async () => {
+    await OrderNotifications.storeMessage({ ...(order as object), locale: "fr" } as never, text("Votre clé est prête."));
 
     expect(send).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ to: "zz-sami@example.tn", subject: "Nouveau message concernant votre commande n°42" }));
-    expect(send.mock.calls[0]![0].text).toContain("/order/order-1");
+    expect(send.mock.calls[0]![0].text).toContain("Votre clé est prête.");
+    expect(send.mock.calls[0]![0].text).toContain("https://shop.example/order/order-1");
   });
 
   it("payment sent and problem reported go to the same team list", async () => {

@@ -57,6 +57,15 @@ describe("Meta Pixel helper", () => {
     }, { eventID: "order-order-7" }]);
   });
 
+  it("reports a placed order as AddPaymentInfo, not as a purchase", () => {
+    m.loadMetaPixel("id");
+    m.pixel.addPaymentInfo([{ productId: "p-1", quantity: 2, priceMillimes: 20_000 }], 40_000);
+
+    expect(calls()[1]).toEqual(["track", "AddPaymentInfo", {
+      content_ids: ["p-1"], content_type: "product", contents: [{ id: "p-1", quantity: 2, item_price: 20 }], num_items: 2, value: 40, currency: "TND",
+    }]);
+  });
+
   it("never sends personal data (no email, phone, name of a person or address fields)", () => {
     m.loadMetaPixel("id");
     m.pixel.initiateCheckout([{ productId: "p-1", quantity: 1, priceMillimes: 1_000 }], 8_000);

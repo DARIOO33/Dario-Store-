@@ -476,7 +476,7 @@ describe("'Report a problem' on a chat the store closed", () => {
 });
 
 describe("emailing the team about customer messages nobody opened", () => {
-  const waiting = (id: string, orderId: string, hasImage = false) => ({ id, orderId, hasImage });
+  const waiting = (id: string, orderId: string, hasImage = false) => ({ id, orderId, body: `text of ${id}`, hasImage, sensitive: false });
 
   it("sends nothing at the moment the customer writes", async () => {
     await MessageService.send("order-1", customer, false, "Is my key ready?");
@@ -494,7 +494,7 @@ describe("emailing the team about customer messages nobody opened", () => {
     expect(notifications.customerMessages).not.toHaveBeenCalled();
   });
 
-  it("sends one email per order, counting its messages and saying when there is a photo", async () => {
+  it("sends one email per order, with that order's messages", async () => {
     messages.findWaitingForTeam.mockResolvedValue([waiting("m1", "order-1"), waiting("m2", "order-1", true), waiting("m3", "order-2")]);
     messages.markTeamEmailed.mockResolvedValue(1);
     orders.findById.mockImplementation(async (id) => order({ id }));
@@ -502,8 +502,8 @@ describe("emailing the team about customer messages nobody opened", () => {
     await expect(MessageService.emailTeamAboutWaiting()).resolves.toBe(2);
 
     expect(messages.markTeamEmailed).toHaveBeenCalledWith(["m1", "m2"], expect.anything());
-    expect(notifications.customerMessages).toHaveBeenCalledWith(expect.objectContaining({ id: "order-1" }), 2, true);
-    expect(notifications.customerMessages).toHaveBeenCalledWith(expect.objectContaining({ id: "order-2" }), 1, false);
+    expect(notifications.customerMessages).toHaveBeenCalledWith(expect.objectContaining({ id: "order-1" }), [expect.objectContaining({ body: "text of m1" }), expect.objectContaining({ body: "text of m2", hasImage: true })]);
+    expect(notifications.customerMessages).toHaveBeenCalledWith(expect.objectContaining({ id: "order-2" }), [expect.objectContaining({ body: "text of m3" })]);
   });
 
   it("[fixed] does not email twice when another run already announced the messages", async () => {
@@ -521,7 +521,7 @@ describe("emailing the customer about a store message", () => {
     expect(notifications.storeMessage).not.toHaveBeenCalled();
 
     await MessageService.send("order-1", staff, true, "Your key is ready.", undefined, false, true);
-    expect(notifications.storeMessage).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: "order-1" }));
+    expect(notifications.storeMessage).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: "order-1" }), { body: "Your key is ready.", hasImage: false, sensitive: false });
   });
 
   it("[fixed] a customer can't make the shop email them by sending the box themselves", async () => {

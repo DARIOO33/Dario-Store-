@@ -96,7 +96,7 @@ export const MessageRepository = {
       .where((m) => m.createdAt.gte(from))
       .where((m) => m.createdAt.lte(until))
       .all();
-    return rows.map((row) => ({ id: row.id, orderId: row.orderId, hasImage: row.hasImage }));
+    return rows.map((row) => ({ id: row.id, orderId: row.orderId, body: openText(row.body), hasImage: row.hasImage, sensitive: row.sensitive }));
   },
 
   // Returns how many were newly marked: 0 means another run already emailed the team about them.

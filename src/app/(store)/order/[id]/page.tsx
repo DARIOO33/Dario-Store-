@@ -9,10 +9,12 @@ import PaymentPanel from "@/src/components/orders/PaymentPanel";
 import OrderItemsPanel from "@/src/components/orders/OrderItemsPanel";
 import OrderChat from "@/src/components/chat/OrderChat";
 import ClearCartAfterOrder from "@/src/components/cart/ClearCartAfterOrder";
+import ReportPurchase from "@/src/components/cart/ReportPurchase";
+import { PURCHASE_REPORT_DAYS } from "@/src/lib/meta-pixel";
 import { ReviewService } from "@/src/services/reviews";
 import { AvailabilityService } from "@/src/services/availability";
 import { availabilityText } from "@/src/lib/availability";
-import { formatDateTime } from "@/src/lib/time";
+import { daysAgo, formatDateTime } from "@/src/lib/time";
 import { getT, pageTitle } from "@/src/i18n/server";
 import { isTeam } from "@/src/lib/roles";
 import { ShipmentService } from "@/src/services/shipments";
@@ -49,15 +51,14 @@ export default async function OrderPage({ params, searchParams }: Props) {
   // Only while the order still waits for the shop (payment to check, or delivery to make).
   const waitingForShop = order.paymentMethod !== "CASH_ON_DELIVERY" && (order.status === "PENDING" || order.status === "PAID");
 
+  // For the Meta Pixel: a sale counts once the store confirmed the payment, when the customer (not the team) sees it.
+  const pixelLines = order.items.flatMap((item) => (item.productId ? [{ productId: item.productId, quantity: item.quantity, priceMillimes: item.unitPriceMillimes }] : []));
+  const paidRecently = order.paymentStatus === "VERIFIED" && !!order.paidAt && Temporal.Instant.compare(order.paidAt, daysAgo(PURCHASE_REPORT_DAYS)) > 0;
+
   return (
     <div className="wrap pageTop">
-      {sp.new && (
-        <ClearCartAfterOrder
-          orderId={order.id}
-          totalMillimes={order.totalMillimes}
-          lines={order.items.flatMap((item) => (item.productId ? [{ productId: item.productId, quantity: item.quantity, priceMillimes: item.unitPriceMillimes }] : []))}
-        />
-      )}
+      {sp.new && <ClearCartAfterOrder orderId={order.id} totalMillimes={order.totalMillimes} lines={pixelLines} />}
+      {paidRecently && !isAdmin && <ReportPurchase orderId={order.id} totalMillimes={order.totalMillimes} lines={pixelLines} />}
       {sp.new && !cancelled && (
         <div className="thanks">
           <span className="thanksMark" aria-hidden="true">✓</span>

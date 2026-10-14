@@ -170,7 +170,7 @@ export const MessageService = {
     return { messages: messages.map((message) => toChat(message, access.asAdmin)), closed: closure !== null, closure, payment, review, problemReport, canClose };
   },
 
-  // `emailCustomer` is the team's "Email the customer" box: the customer gets a link to the chat, never the text.
+  // `emailCustomer` is the team's "Email the customer" box: the customer gets the message by email too.
   send: async (orderId: string, viewer: Viewer, asAdmin: boolean, text: string, image?: { bytes: Uint8Array }, sensitive = false, emailCustomer = false) => {
     const access = await accessFor(orderId, viewer, asAdmin);
     if (!access) throw userError("errors.writeDenied");
@@ -199,7 +199,7 @@ export const MessageService = {
     if (image && mimeType) await ChatImages.save(message.id, { bytes: image.bytes, mimeType });
 
     // A customer's message is emailed to the team later, if nobody opened it (emailTeamAboutWaiting).
-    if (access.asAdmin && emailCustomer) runAfterResponse(() => OrderNotifications.storeMessage(access.order));
+    if (access.asAdmin && emailCustomer) runAfterResponse(() => OrderNotifications.storeMessage(access.order, { body, hasImage: !!image, sensitive }));
 
     return { message: toChat({ ...message, sender: access.asAdmin ? { name: viewer!.name ?? "" } : null }, access.asAdmin) };
   },
@@ -221,7 +221,7 @@ export const MessageService = {
       const order = marked > 0 ? await OrderRepository.findById(orderId) : null;
       if (!order) continue;
 
-      await OrderNotifications.customerMessages(order, messages.length, messages.some((message) => message.hasImage));
+      await OrderNotifications.customerMessages(order, messages);
       emails += 1;
     }
     return emails;

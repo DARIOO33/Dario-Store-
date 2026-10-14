@@ -67,6 +67,8 @@ function frame({ t, footer, kicker, title, intro, body, button, after = "" }: Fr
 const orderFooter = (t: Translator, number: number) => t("email.footer", { number, store: STORE_NAME });
 const viewOrder = (t: Translator, url: string) => ({ label: t("email.viewOrder"), url });
 const paragraph = (text: string) => `<p style="margin:0 0 14px;">${escape(text)}</p>`;
+// A chat message, shown as it was written.
+const quote = (text: string) => `<div style="margin:0 0 14px;padding:14px 16px;background:${PAPER};border:2px solid ${INK};word-break:break-word;">${withBreaks(text)}</div>`;
 
 export type OrderEmailData = {
   locale: Locale;
@@ -142,16 +144,19 @@ export function paymentConfirmedEmail(data: OrderEmailData & { fulfilment: strin
 
 /* ---------- 2b. new chat message from the store (when the team asks for it) ---------- */
 
-// The message itself stays in the encrypted chat: the email only says there is one.
-export function chatMessageEmail(data: OrderEmailData): Email {
+// Shows the message, except login details: those stay in the chat, where they are erased after a few days.
+export function chatMessageEmail(data: OrderEmailData & { message: { body: string; hasImage: boolean; sensitive: boolean } }): Email {
   const t = createTranslator(data.locale);
   const number = data.orderNumber;
-  const body = `${paragraph(t("email.hello", { name: data.name }))}${paragraph(t("email.chatBody"))}`;
+  const { message } = data;
+  const shown = message.sensitive ? "" : message.body;
+  const notes = [message.sensitive ? t("email.chatHidden") : "", message.hasImage && !message.sensitive ? t("email.chatPhoto") : "", t("email.chatReply")].filter(Boolean);
+  const body = `${paragraph(t("email.hello", { name: data.name }))}${shown ? quote(shown) : ""}${notes.map(paragraph).join("")}`;
 
   return {
     subject: t("email.chatSubject", { number }),
     html: frame({ t, footer: orderFooter(t, number), kicker: t("email.chatKicker"), title: t("email.chatTitle"), intro: t("email.chatIntro", { number }), body, button: viewOrder(t, data.orderUrl) }),
-    text: [t("email.hello", { name: data.name }), t("email.chatIntro", { number }), t("email.chatBody"), `${t("email.viewOrder")}: ${data.orderUrl}`].join("\n\n"),
+    text: [t("email.hello", { name: data.name }), t("email.chatIntro", { number }), ...(shown ? ["----", shown, "----"] : []), ...notes, `${t("email.viewOrder")}: ${data.orderUrl}`].join("\n\n"),
   };
 }
 
@@ -224,12 +229,14 @@ export function adminNewOrderEmail(data: {
 
 /* ---------- 6. short alert for the shop owner ---------- */
 
-export function adminAlertEmail(data: { kicker: string; title: string; intro: string; adminUrl: string }): Email {
+// `quotes` = the customer's chat messages the alert is about, when there are any to show.
+export function adminAlertEmail(data: { kicker: string; title: string; intro: string; quotes?: string[]; adminUrl: string }): Email {
   const t = createTranslator("en");
+  const quotes = data.quotes ?? [];
   return {
     subject: data.title,
-    html: frame({ t, footer: `Sent by ${STORE_NAME}.`, kicker: data.kicker, title: data.title, intro: data.intro, body: "", button: { label: "Open in admin", url: data.adminUrl } }),
-    text: [data.title, data.intro, `Open in admin: ${data.adminUrl}`].join("\n\n"),
+    html: frame({ t, footer: `Sent by ${STORE_NAME}.`, kicker: data.kicker, title: data.title, intro: data.intro, body: quotes.map(quote).join(""), button: { label: "Open in admin", url: data.adminUrl } }),
+    text: [data.title, data.intro, ...quotes.map((text) => `> ${text.replace(/\n/g, "\n> ")}`), `Open in admin: ${data.adminUrl}`].join("\n\n"),
   };
 }
 

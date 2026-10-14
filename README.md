@@ -220,7 +220,7 @@ Defined in [src/prisma/contract.prisma](src/prisma/contract.prisma). The better-
   (`src/lib/mask.ts`; the `*` runs are then smudged with CSS blur) — the real details, the internal notes, the
   AliExpress link and the contact channel never reach a visitor's browser. Tracking pages are `noindex`.
 - **Team alerts by email:** a new order, a customer tapping "Payment sent", a customer chat message nobody
-  opened after 5 minutes (one email per order, without the text; needs a scheduler calling `/api/cron/chat-emails`
+  opened after 5 minutes (one email per order, with the text unless it is login details; needs a scheduler calling `/api/cron/chat-emails`
   every minute with `CRON_SECRET`) and "Report a problem" each email the team: the admins
   (`ADMIN_NOTIFY_EMAIL` in `.env`, comma-separated; empty = every admin account) plus every staff account.
   Sent only once SMTP is set up.

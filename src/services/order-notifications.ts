@@ -19,6 +19,15 @@ import { toLocale } from "../i18n/config";
 
 type OrderRow = NonNullable<Awaited<ReturnType<typeof OrderRepository.findById>>>;
 
+// A chat message as an email shows it. Login details are never emailed: they are erased from the chat
+// after a few days, and a copy in a mailbox would stay.
+type EmailedMessage = { body: string; hasImage: boolean; sensitive: boolean };
+
+function teamQuote(message: EmailedMessage) {
+  if (message.sensitive) return "[Login details: open the chat to see them]";
+  return [message.body, message.hasImage ? "[Photo: open the chat to see it]" : ""].filter(Boolean).join("\n");
+}
+
 // Guests need their private token in the link; account customers log in.
 function orderUrl(order: { id: string; guestToken: string | null }) {
   return `${siteUrl()}/order/${order.id}${order.guestToken ? `?t=${order.guestToken}` : ""}`;
@@ -100,24 +109,25 @@ export const OrderNotifications = {
   },
 
   // The customer wrote in the order chat and nobody on the team opened it in time (see
-  // MessageService.emailTeamAboutWaiting). The text stays in the encrypted chat.
-  customerMessages: async (order: OrderRow, count: number, withPhoto: boolean) => {
+  // MessageService.emailTeamAboutWaiting). The email shows what they wrote.
+  customerMessages: async (order: OrderRow, messages: EmailedMessage[]) => {
     const to = await teamAddresses();
     if (to.length === 0) return;
 
-    const what = count === 1 ? "a message" : `${count} messages`;
+    const count = messages.length;
     const email = adminAlertEmail({
       kicker: "Unread message",
       title: `Order #${order.orderNumber}: ${count === 1 ? "unread message" : `${count} unread messages`}`,
-      intro: `${order.customerName} wrote ${what} in the order chat${withPhoto ? " (with a photo)" : ""} more than ${CHAT_EMAIL_AFTER_MINUTES} minutes ago and nobody has opened it yet. Open the order to answer.`,
+      intro: `${order.customerName} wrote in the order chat more than ${CHAT_EMAIL_AFTER_MINUTES} minutes ago and nobody has opened it yet. Open the order to answer.`,
+      quotes: messages.map(teamQuote),
       adminUrl: `${siteUrl()}/admin/orders/${order.id}`,
     });
     await sendEmail({ to: to.join(", "), ...email });
   },
 
-  // The team answered in the chat and ticked "Email the customer": a link to the chat, without the text.
-  storeMessage: async (order: OrderRow) => {
-    const email = chatMessageEmail({ locale: toLocale(order.locale), name: order.customerName, orderNumber: order.orderNumber, orderUrl: orderUrl(order) });
+  // The team answered in the chat and ticked "Email the customer": the message and a link to the chat.
+  storeMessage: async (order: OrderRow, message: EmailedMessage) => {
+    const email = chatMessageEmail({ locale: toLocale(order.locale), name: order.customerName, orderNumber: order.orderNumber, orderUrl: orderUrl(order), message });
     await sendEmail({ to: order.customerEmail, ...email });
   },
 

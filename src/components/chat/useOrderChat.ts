@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { markPaymentSentAction, openChatAction, requestNewProofAction, sendChatMessageAction, setChatClosedAction, wipeChatMessageAction } from "@/src/actions/messages";
 import type { ChatClosure, ChatMessage, ChatPayment, ChatReview, ProblemReportState } from "@/src/services/messages";
@@ -21,6 +21,7 @@ export function useOrderChat(orderId: string, asAdmin: boolean) {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const stage = useRef<string | null | undefined>(undefined);
 
   const refresh = useCallback(async () => {
     const result = await openChatAction(orderId, asAdmin);
@@ -35,7 +36,12 @@ export function useOrderChat(orderId: string, asAdmin: boolean) {
     setCanClose(result.canClose);
     setPayment(result.payment);
     setLoaded(true);
-  }, [orderId, asAdmin]);
+
+    // The customer's order page shows the stage too (and reports a paid order to Meta): reload it when it moves.
+    const next = result.payment.stage?.status ?? null;
+    if (!asAdmin && stage.current !== undefined && stage.current !== next) router.refresh();
+    stage.current = next;
+  }, [orderId, asAdmin, router]);
 
   useEffect(() => {
     // The first fetch happens after mount; later ones come from the timer.

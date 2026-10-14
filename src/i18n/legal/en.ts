@@ -94,7 +94,7 @@ export const legalEn: LegalTexts = {
         heading: "Cookies and storage",
         paragraphs: [
           "We use a login cookie (to keep you signed in), a language cookie (English or French), and your browser's storage for your cart.",
-          "We also use the Meta Pixel (Facebook/Instagram) to measure our ads: it records which pages and products are viewed, what is added to the cart and purchases (product, quantity and amount), with Meta's cookies. We never send it your name, email, phone or address. You can limit this in your browser or in your Facebook/Instagram ad settings.",
+          "We also use the Meta Pixel (Facebook/Instagram) to measure our ads: it records which pages and products are viewed, what is added to the cart, orders placed and paid purchases (product, quantity and amount), with Meta's cookies. We never send it your name, email, phone or address. You can limit this in your browser or in your Facebook/Instagram ad settings.",
         ],
       },
       {

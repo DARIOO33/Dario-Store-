@@ -7,6 +7,10 @@ type Fbq = ((...args: unknown[]) => void) & { callMethod?: (...args: unknown[]) 
 type PixelWindow = Window & { fbq?: Fbq; _fbq?: Fbq };
 
 const CURRENCY = "TND";
+
+// A purchase is reported when the customer sees their order as paid, for this many days after the payment
+// was confirmed (later than that, Meta can no longer link it to an ad).
+export const PURCHASE_REPORT_DAYS = 7;
 const MAX_PENDING = 50;
 let pending: unknown[][] = [];
 let loaded = false;
@@ -51,6 +55,15 @@ type Line = { productId: string; quantity: number; priceMillimes?: number };
 const contents = (lines: Line[]) =>
   lines.map((line) => ({ id: line.productId, quantity: line.quantity, ...(line.priceMillimes !== undefined && { item_price: millimesToDinars(line.priceMillimes) }) }));
 
+const orderData = (lines: Line[], totalMillimes: number) => ({
+  content_ids: lines.map((line) => line.productId),
+  content_type: "product",
+  contents: contents(lines),
+  num_items: lines.reduce((sum, line) => sum + line.quantity, 0),
+  value: millimesToDinars(totalMillimes),
+  currency: CURRENCY,
+});
+
 export const pixel = {
   pageView: () => send("track", "PageView"),
 
@@ -67,24 +80,14 @@ export const pixel = {
       currency: CURRENCY,
     }),
 
-  initiateCheckout: (lines: Line[], totalMillimes: number) =>
-    send("track", "InitiateCheckout", {
-      content_ids: lines.map((line) => line.productId),
-      content_type: "product",
-      contents: contents(lines),
-      num_items: lines.reduce((sum, line) => sum + line.quantity, 0),
-      value: millimesToDinars(totalMillimes),
-      currency: CURRENCY,
-    }),
+  initiateCheckout: (lines: Line[], totalMillimes: number) => send("track", "InitiateCheckout", orderData(lines, totalMillimes)),
 
-  // The order id is the event id, so Meta counts one purchase even if the page is sent twice.
-  purchase: (orderId: string, lines: Line[], totalMillimes: number) =>
-    send(
-      "track",
-      "Purchase",
-      { content_ids: lines.map((line) => line.productId), content_type: "product", contents: contents(lines), num_items: lines.reduce((sum, line) => sum + line.quantity, 0), value: millimesToDinars(totalMillimes), currency: CURRENCY },
-      { eventID: `order-${orderId}` },
-    ),
+  // The order was placed. It is not a sale yet: many orders are never paid.
+  addPaymentInfo: (lines: Line[], totalMillimes: number) => send("track", "AddPaymentInfo", orderData(lines, totalMillimes)),
+
+  // The store confirmed the payment. The order id is the event id, so Meta counts one purchase even if
+  // it is sent twice (another device, a cleared browser).
+  purchase: (orderId: string, lines: Line[], totalMillimes: number) => send("track", "Purchase", orderData(lines, totalMillimes), { eventID: `order-${orderId}` }),
 
   completeRegistration: () => send("track", "CompleteRegistration"),
 };

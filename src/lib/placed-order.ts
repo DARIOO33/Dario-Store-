@@ -21,3 +21,18 @@ export function consumePlacedOrder(orderId: string) {
     return false;
   }
 }
+
+// The order page reports a paid order to Meta once per browser, however often the page is opened.
+const REPORTED_KEY = "dario-purchase-reported";
+
+export function firstPurchaseReport(orderId: string) {
+  try {
+    const reported: string[] = JSON.parse(localStorage.getItem(REPORTED_KEY) ?? "[]");
+    if (reported.includes(orderId)) return false;
+    localStorage.setItem(REPORTED_KEY, JSON.stringify([...reported, orderId].slice(-50)));
+    return true;
+  } catch {
+    // Private mode: better no purchase than one on every visit.
+    return false;
+  }
+}
