@@ -8,8 +8,8 @@ type PixelWindow = Window & { fbq?: Fbq; _fbq?: Fbq };
 
 const CURRENCY = "TND";
 
-// A purchase is reported when the customer sees their order as paid, for this many days after the payment
-// was confirmed (later than that, Meta can no longer link it to an ad).
+// A purchase is reported when the customer sees their order as paid (or "payment sent"), for this many days
+// after that (later than that, Meta can no longer link it to an ad).
 export const PURCHASE_REPORT_DAYS = 7;
 const MAX_PENDING = 50;
 let pending: unknown[][] = [];
@@ -85,8 +85,8 @@ export const pixel = {
   // The order was placed. It is not a sale yet: many orders are never paid.
   addPaymentInfo: (lines: Line[], totalMillimes: number) => send("track", "AddPaymentInfo", orderData(lines, totalMillimes)),
 
-  // The store confirmed the payment. The order id is the event id, so Meta counts one purchase even if
-  // it is sent twice (another device, a cleared browser).
+  // The customer pressed "Payment sent" (or the store confirmed the payment). The order id is the event id,
+  // so Meta counts one purchase even if it is sent twice (another device, a cleared browser).
   purchase: (orderId: string, lines: Line[], totalMillimes: number) => send("track", "Purchase", orderData(lines, totalMillimes), { eventID: `order-${orderId}` }),
 
   completeRegistration: () => send("track", "CompleteRegistration"),

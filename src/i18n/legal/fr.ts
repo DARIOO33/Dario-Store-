@@ -94,7 +94,7 @@ export const legalFr: LegalTexts = {
         heading: "Cookies et stockage",
         paragraphs: [
           "Nous utilisons un cookie de connexion (pour vous garder connecté), un cookie de langue (anglais ou français) et le stockage de votre navigateur pour votre panier.",
-          "Nous utilisons aussi le Pixel Meta (Facebook/Instagram) pour mesurer nos publicités : il enregistre les pages et produits consultés, les ajouts au panier, les commandes passées et les achats payés (produit, quantité et montant), avec les cookies de Meta. Nous ne lui envoyons jamais votre nom, e-mail, téléphone ou adresse. Vous pouvez limiter cela dans votre navigateur ou dans vos paramètres publicitaires Facebook/Instagram.",
+          "Nous utilisons aussi le Pixel Meta (Facebook/Instagram) pour mesurer nos publicités : il enregistre les pages et produits consultés, les ajouts au panier, les commandes passées et les achats une fois que vous nous indiquez avoir payé (produit, quantité et montant), avec les cookies de Meta. Nous ne lui envoyons jamais votre nom, e-mail, téléphone ou adresse. Vous pouvez limiter cela dans votre navigateur ou dans vos paramètres publicitaires Facebook/Instagram.",
         ],
       },
       {

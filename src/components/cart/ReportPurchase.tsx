@@ -10,8 +10,8 @@ type Props = {
   lines: { productId: string; quantity: number; priceMillimes: number }[];
 };
 
-// Rendered on the customer's order page once the store has confirmed the payment: reports the
-// purchase to Meta, once per browser. An order that is never paid is never a sale.
+// Rendered on the customer's order page once they pressed "Payment sent" (or the store confirmed the
+// payment): reports the purchase to Meta, once per browser. An order nobody paid is never a sale.
 export default function ReportPurchase({ orderId, totalMillimes, lines }: Props) {
   useEffect(() => {
     if (firstPurchaseReport(orderId)) pixel.purchase(orderId, lines, totalMillimes);

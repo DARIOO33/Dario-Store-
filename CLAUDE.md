@@ -190,9 +190,10 @@ npm run seed:store     # demo catalogue
 - Contact channels: `CONTACT` in `lib/store.ts`.
 - Meta Pixel (`META_PIXEL_ID` in `lib/store.ts`): loaded by the root layout in production builds only, never on `/admin`.
   Events go through `pixel.*` in `lib/meta-pixel.ts` (ViewContent, AddToCart, InitiateCheckout, AddPaymentInfo when
-  an order is placed, Purchase with the order id as eventID, CompleteRegistration). Purchase is only sent once the payment
-  is `VERIFIED`: `ReportPurchase` on the customer's order page, once per browser, for `PURCHASE_REPORT_DAYS` after `paidAt`
-  (the chat reloads the page when the stage moves). An unpaid order is never a sale. Send product ids, quantities and amounts only — never names, emails, phones or
+  an order is placed, Purchase with the order id as eventID, CompleteRegistration). Purchase is sent once the customer pressed
+  "Payment sent" (`SUBMITTED`) or the payment is `VERIFIED` (cash on delivery): `ReportPurchase` on the customer's order page,
+  once per browser, for `PURCHASE_REPORT_DAYS` after `paymentSentAt` / `paidAt` (the chat reloads the page after the button
+  and when the stage moves). An order placed but never paid is never a sale. No server-side Conversions API (owner's choice). Send product ids, quantities and amounts only — never names, emails, phones or
   addresses. The privacy policy (`i18n/legal`) describes it: keep both in step if you add events or data.
 
 ## Known gaps (don't "fix" silently — ask)

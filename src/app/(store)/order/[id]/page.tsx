@@ -51,9 +51,11 @@ export default async function OrderPage({ params, searchParams }: Props) {
   // Only while the order still waits for the shop (payment to check, or delivery to make).
   const waitingForShop = order.paymentMethod !== "CASH_ON_DELIVERY" && (order.status === "PENDING" || order.status === "PAID");
 
-  // For the Meta Pixel: a sale counts once the store confirmed the payment, when the customer (not the team) sees it.
+  // For the Meta Pixel: a sale counts once the customer pressed "Payment sent" (the page reloads right after), or once
+  // the store confirmed the payment (cash on delivery has no button). Only when the customer (not the team) sees it.
   const pixelLines = order.items.flatMap((item) => (item.productId ? [{ productId: item.productId, quantity: item.quantity, priceMillimes: item.unitPriceMillimes }] : []));
-  const paidRecently = order.paymentStatus === "VERIFIED" && !!order.paidAt && Temporal.Instant.compare(order.paidAt, daysAgo(PURCHASE_REPORT_DAYS)) > 0;
+  const paidOrSentAt = order.paymentStatus === "SUBMITTED" || order.paymentStatus === "VERIFIED" ? (order.paymentSentAt ?? order.paidAt) : null;
+  const paidRecently = !!paidOrSentAt && Temporal.Instant.compare(paidOrSentAt, daysAgo(PURCHASE_REPORT_DAYS)) > 0;
 
   return (
     <div className="wrap pageTop">

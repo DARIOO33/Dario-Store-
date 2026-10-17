@@ -37,7 +37,7 @@ export function useOrderChat(orderId: string, asAdmin: boolean) {
     setPayment(result.payment);
     setLoaded(true);
 
-    // The customer's order page shows the stage too (and reports a paid order to Meta): reload it when it moves.
+    // The customer's order page shows the stage too (and reports a sent or confirmed payment to Meta): reload it when it moves.
     const next = result.payment.stage?.status ?? null;
     if (!asAdmin && stage.current !== undefined && stage.current !== next) router.refresh();
     stage.current = next;
