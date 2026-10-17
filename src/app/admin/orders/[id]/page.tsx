@@ -16,6 +16,7 @@ import { requirePageRole } from "@/src/lib/guards";
 import { TEAM } from "@/src/lib/roles";
 import { ShipmentService } from "@/src/services/shipments";
 import CreateTrackingButton from "@/src/components/admin/CreateTrackingButton";
+import DeleteOrderButton from "@/src/components/admin/DeleteOrderButton";
 
 export const metadata: Metadata = { title: "Order" };
 
@@ -96,6 +97,21 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
               sentAt={order.deliveryEmailSentAt ? formatDateTime(order.deliveryEmailSentAt) : null}
               alreadyDelivered={order.status === "DELIVERED"}
             />
+          )}
+
+          {/* Deleting is ADMIN only; a paid order must be marked refunded first. */}
+          {viewer.role === "ADMIN" && order.status === "CANCELLED" && (
+            <section className="panel">
+              <h2>Delete order</h2>
+              {order.paymentStatus === "VERIFIED" ? (
+                <p className="muted">This order was paid. Send the money back and mark it refunded before deleting it.</p>
+              ) : (
+                <>
+                  <p className="muted">Removes this cancelled order, its chat and chat photos for good. Reviews and trackings are kept.</p>
+                  <DeleteOrderButton orderId={order.id} orderNumber={order.orderNumber} />
+                </>
+              )}
+            </section>
           )}
 
           <section className="panel">

@@ -75,6 +75,17 @@ export async function cancelMyOrderAction(orderId: string, token: string | null)
   });
 }
 
+export async function changePaymentMethodAction(orderId: string, paymentMethod: string, cryptoNetwork: string) {
+  const user = await getCurrentUser();
+  const locale = await getLocale();
+
+  return await safely(async () => {
+    await OrderService.changePaymentMethod(String(orderId), user, { paymentMethod: String(paymentMethod ?? ""), cryptoNetwork: String(cryptoNetwork ?? "") }, locale);
+    revalidatePath(`/order/${orderId}`);
+    revalidatePath("/admin", "layout");
+  });
+}
+
 // The admin's "send delivery email" panel.
 export async function sendDeliveryEmailAction(orderId: string, message: string, markDelivered: boolean) {
   await requireRole(...TEAM);
@@ -99,6 +110,15 @@ export async function markRefundedAction(orderId: string) {
     await OrderService.markRefunded(String(orderId));
     revalidatePath("/admin", "layout");
     revalidatePath(`/order/${orderId}`);
+  });
+}
+
+export async function deleteCancelledOrderAction(orderId: string) {
+  await requireRole("ADMIN");
+
+  return await safely(async () => {
+    await OrderService.deleteCancelled(String(orderId));
+    revalidatePath("/admin", "layout");
   });
 }
 

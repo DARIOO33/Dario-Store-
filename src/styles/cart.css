@@ -320,6 +320,22 @@
   }
 }
 
+/* The order page's "Change payment method" form: one choice per row in the narrow side column. */
+.payChange {
+  margin-top: 0.4rem;
+}
+
+.payChange .payGrid {
+  grid-template-columns: 1fr;
+}
+
+.payChangeActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
 /* Loading spinner: a ring with one orange arc, shown while an order is being placed. */
 .spinner {
   display: inline-block;

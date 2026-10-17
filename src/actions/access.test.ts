@@ -50,7 +50,7 @@ const form = () => {
   return data;
 };
 
-// Actions only the admin may use (products, categories, reviews, refunds, availability).
+// Actions only the admin may use (products, categories, reviews, refunds, deleting orders, availability).
 const ADMIN_ACTIONS: [string, () => Promise<unknown>][] = [
   ["setAvailableAction", () => availability.setAvailableAction(15)],
   ["setAwayAction", () => availability.setAwayAction("2030-01-01T07:00")],
@@ -67,6 +67,7 @@ const ADMIN_ACTIONS: [string, () => Promise<unknown>][] = [
   ["setReviewHiddenAction", () => reviews.setReviewHiddenAction("r-1", true)],
   ["replyToReviewAction", () => reviews.replyToReviewAction("r-1", "Thanks")],
   ["markRefundedAction", () => orders.markRefundedAction("o-1")],
+  ["deleteCancelledOrderAction", () => orders.deleteCancelledOrderAction("o-1")],
 ];
 
 // Actions for the whole team, admin and staff (orders, payment checks, delivery, shipments).
@@ -92,7 +93,7 @@ beforeEach(() => {
 
 describe("admin-only server actions", () => {
   it("covers every team action exported from src/actions", () => {
-    expect(ADMIN_ACTIONS.length + TEAM_ACTIONS.length).toBe(27);
+    expect(ADMIN_ACTIONS.length + TEAM_ACTIONS.length).toBe(28);
   });
 
   it.each(ADMIN_ACTIONS)("%s refuses guests, customers and staff without touching any service", async (_name, call) => {

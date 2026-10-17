@@ -2,6 +2,7 @@
 
 import { db } from "./db";
 import { now } from "../lib/time";
+import type { PaymentMethod } from "../lib/payments";
 
 export type OrderStatus = "PENDING" | "PAID" | "SHIPPED" | "DELIVERED" | "CANCELLED";
 
@@ -69,6 +70,19 @@ export const OrderRepository = {
     return await db.orm.public.Order.where({ id, status: "PENDING" })
       .where((o) => o.paymentStatus.in(from))
       .update({ paymentStatus: to, ...(paymentSentAt && { paymentSentAt }), updatedAt: now() });
+  },
+
+  // The customer picked another way to pay. Same compare-and-swap as above: only while the order waits
+  // for a payment nobody has sent yet. Returns null when nothing matched.
+  changePaymentMethod: async (id: string, paymentMethod: PaymentMethod, cryptoNetwork: string | null) => {
+    return await db.orm.public.Order.where({ id, status: "PENDING" })
+      .where((o) => o.paymentStatus.in(["PENDING", "FAILED"]))
+      .update({ paymentMethod, cryptoNetwork, updatedAt: now() });
+  },
+
+  // Items, chat messages and their photo rows go with it (cascade); reviews and trackings stay, unlinked.
+  deleteCancelled: async (id: string) => {
+    return await db.orm.public.Order.where({ id, status: "CANCELLED" }).delete();
   },
 
   // Orders whose customer says they've paid and are waiting for the store to check.

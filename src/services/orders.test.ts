@@ -55,9 +55,10 @@ vi.mock("../prisma/db", () => {
 vi.mock("../prisma/products", () => ({ ProductRepository: { findByIds: vi.fn() } }));
 vi.mock("../prisma/orders", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../prisma/orders")>()),
-  OrderRepository: { findById: vi.fn(), countByEmailSince: vi.fn(), setPaymentStatus: vi.fn(), changePaymentStatus: vi.fn(), listForUser: vi.fn() },
+  OrderRepository: { findById: vi.fn(), countByEmailSince: vi.fn(), setPaymentStatus: vi.fn(), changePaymentStatus: vi.fn(), changePaymentMethod: vi.fn(), deleteCancelled: vi.fn(), listForUser: vi.fn() },
 }));
-vi.mock("../prisma/messages", () => ({ MessageRepository: { countCustomerImages: vi.fn(), create: vi.fn() } }));
+vi.mock("../prisma/messages", () => ({ MessageRepository: { countCustomerImages: vi.fn(), create: vi.fn(), findImagesForOrder: vi.fn() } }));
+vi.mock("./chat-images", () => ({ ChatImages: { remove: vi.fn() } }));
 vi.mock("./order-notifications", () => ({
   OrderNotifications: { placed: vi.fn(), paid: vi.fn(), paymentSent: vi.fn(), deliverByEmail: vi.fn(), buildDelivery: vi.fn() },
 }));
@@ -66,18 +67,21 @@ vi.mock("../lib/email", () => ({ emailConfigured: vi.fn(() => true) }));
 vi.mock("../lib/payments", () => ({
   AVAILABLE_ONLINE_METHODS: ["D17", "CRYPTO"],
   AVAILABLE_CRYPTO_NETWORKS: [{ id: "TRC20" }],
+  paymentLabel: (_t: unknown, method: string, network?: string | null) => (network ? `${method} · ${network}` : method),
 }));
 
 import { ProductRepository } from "../prisma/products";
 import { OrderRepository } from "../prisma/orders";
 import { MessageRepository } from "../prisma/messages";
 import { OrderNotifications } from "./order-notifications";
+import { ChatImages } from "./chat-images";
 import { OrderService, type CheckoutInput } from "./orders";
 
 const products = vi.mocked(ProductRepository);
 const orders = vi.mocked(OrderRepository);
 const messages = vi.mocked(MessageRepository);
 const notifications = vi.mocked(OrderNotifications);
+const chatImages = vi.mocked(ChatImages);
 
 const customer = { id: "user-1", role: "MEMBER" };
 const stranger = { id: "user-2", role: "MEMBER" };
@@ -464,5 +468,85 @@ describe("placing an order of AliExpress picks", () => {
   it("doesn't change normal orders (no terms needed, shipping still charged)", async () => {
     await OrderService.place(checkout());
     expect(state.createdOrders[0]).toMatchObject({ aliexpressPick: false, termsAcceptedAt: null, shippingMillimes: 7_000 });
+  });
+});
+
+describe("the customer's 'Change payment method'", () => {
+  beforeEach(() => {
+    orders.findById.mockResolvedValue(order({ cryptoNetwork: null }));
+    orders.changePaymentMethod.mockResolvedValue({} as never);
+  });
+
+  it("switches to another available method and tells the team in the chat", async () => {
+    await OrderService.changePaymentMethod("order-1", customer, { paymentMethod: "CRYPTO", cryptoNetwork: "TRC20" }, "en");
+
+    expect(orders.changePaymentMethod).toHaveBeenCalledWith("order-1", "CRYPTO", "TRC20");
+    expect(messages.create).toHaveBeenCalledWith(expect.objectContaining({ orderId: "order-1", fromAdmin: false, body: "Payment method changed to CRYPTO · TRC20." }));
+  });
+
+  it("does nothing when the same method is chosen again", async () => {
+    await OrderService.changePaymentMethod("order-1", customer, { paymentMethod: "D17", cryptoNetwork: "" }, "en");
+    expect(orders.changePaymentMethod).not.toHaveBeenCalled();
+    expect(messages.create).not.toHaveBeenCalled();
+  });
+
+  it("only accepts methods and networks the shop offers", async () => {
+    await expect(OrderService.changePaymentMethod("order-1", customer, { paymentMethod: "BANK_TRANSFER", cryptoNetwork: "" }, "en")).rejects.toMatchObject({ key: "errors.choosePayment" });
+    await expect(OrderService.changePaymentMethod("order-1", customer, { paymentMethod: "CASH_ON_DELIVERY", cryptoNetwork: "" }, "en")).rejects.toMatchObject({ key: "errors.choosePayment" });
+    await expect(OrderService.changePaymentMethod("order-1", customer, { paymentMethod: "CRYPTO", cryptoNetwork: "BTC" }, "en")).rejects.toMatchObject({ key: "errors.chooseNetwork" });
+    expect(orders.changePaymentMethod).not.toHaveBeenCalled();
+  });
+
+  it("is refused for other people, cash orders, a payment already sent and an order that moved on", async () => {
+    await expect(OrderService.changePaymentMethod("order-1", stranger, { paymentMethod: "CRYPTO", cryptoNetwork: "TRC20" }, "en")).rejects.toMatchObject({ key: "errors.orderNotFound" });
+    await expect(OrderService.changePaymentMethod("order-1", null, { paymentMethod: "CRYPTO", cryptoNetwork: "TRC20" }, "en")).rejects.toMatchObject({ key: "errors.orderNotFound" });
+
+    orders.findById.mockResolvedValue(order({ paymentMethod: "CASH_ON_DELIVERY" }));
+    await expect(OrderService.changePaymentMethod("order-1", customer, { paymentMethod: "D17", cryptoNetwork: "" }, "en")).rejects.toMatchObject({ key: "errors.paidOnDelivery" });
+
+    orders.findById.mockResolvedValue(order({ paymentStatus: "SUBMITTED" }));
+    await expect(OrderService.changePaymentMethod("order-1", customer, { paymentMethod: "CRYPTO", cryptoNetwork: "TRC20" }, "en")).rejects.toMatchObject({ key: "errors.paymentMethodLocked" });
+
+    orders.findById.mockResolvedValue(order({ status: "PAID", paymentStatus: "VERIFIED" }));
+    await expect(OrderService.changePaymentMethod("order-1", customer, { paymentMethod: "CRYPTO", cryptoNetwork: "TRC20" }, "en")).rejects.toMatchObject({ key: "errors.paymentMethodLocked" });
+    expect(orders.changePaymentMethod).not.toHaveBeenCalled();
+  });
+
+  it("[fixed] loses the race against 'Payment sent' clicked at the same moment", async () => {
+    orders.changePaymentMethod.mockResolvedValue(null as never);
+    await expect(OrderService.changePaymentMethod("order-1", customer, { paymentMethod: "CRYPTO", cryptoNetwork: "TRC20" }, "en")).rejects.toMatchObject({ key: "errors.paymentMethodLocked" });
+    expect(messages.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("deleting a cancelled order", () => {
+  beforeEach(() => {
+    orders.findById.mockResolvedValue(order({ status: "CANCELLED" }));
+    orders.deleteCancelled.mockResolvedValue({} as never);
+    messages.findImagesForOrder.mockResolvedValue([{ messageId: "m-1", storageKey: "chat/1" }] as never);
+  });
+
+  it("deletes the order and its chat photos", async () => {
+    await OrderService.deleteCancelled("order-1");
+
+    expect(orders.deleteCancelled).toHaveBeenCalledWith("order-1");
+    expect(chatImages.remove).toHaveBeenCalledWith(expect.objectContaining({ storageKey: "chat/1" }));
+  });
+
+  it("refuses an order that isn't cancelled, or was paid and not refunded", async () => {
+    orders.findById.mockResolvedValue(order({ status: "PENDING" }));
+    await expect(OrderService.deleteCancelled("order-1")).rejects.toThrow(/Only a cancelled order/);
+
+    orders.findById.mockResolvedValue(order({ status: "CANCELLED", paymentStatus: "VERIFIED" }));
+    await expect(OrderService.deleteCancelled("order-1")).rejects.toThrow(/mark it refunded/);
+
+    expect(orders.deleteCancelled).not.toHaveBeenCalled();
+    expect(chatImages.remove).not.toHaveBeenCalled();
+  });
+
+  it("allows a refunded order", async () => {
+    orders.findById.mockResolvedValue(order({ status: "CANCELLED", paymentStatus: "REFUNDED" }));
+    await OrderService.deleteCancelled("order-1");
+    expect(orders.deleteCancelled).toHaveBeenCalled();
   });
 });

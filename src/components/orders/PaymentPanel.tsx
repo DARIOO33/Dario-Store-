@@ -1,8 +1,9 @@
 import CopyValue from "@/src/components/ui/CopyValue";
-import { CRYPTO_NETWORKS, PAYMENT_INFO, paymentHint, paymentLabel, paymentLineLabel, type PaymentMethod } from "@/src/lib/payments";
+import { AVAILABLE_CRYPTO_NETWORKS, AVAILABLE_ONLINE_METHODS, CRYPTO_NETWORKS, PAYMENT_INFO, paymentHint, paymentLabel, paymentLineLabel, type PaymentMethod } from "@/src/lib/payments";
 import { getT } from "@/src/i18n/server";
 import type { OrderStatus, PaymentStatus } from "@/src/prisma/orders";
 import MarkRefundedButton from "@/src/components/admin/MarkRefundedButton";
+import ChangePaymentMethod from "@/src/components/orders/ChangePaymentMethod";
 import { formatMillimes } from "@/src/lib/money";
 
 type Props = {
@@ -15,14 +16,18 @@ type Props = {
   showInstructions: boolean;
   // Admin view only: lets the admin mark a cancelled, paid order as refunded.
   orderId?: string;
+  // Customer view only: the order whose payment method its owner may still change.
+  changeFor?: string;
 };
 
-export default async function PaymentPanel({ method, cryptoNetwork, status, paymentStatus, totalMillimes, showInstructions, orderId }: Props) {
+export default async function PaymentPanel({ method, cryptoNetwork, status, paymentStatus, totalMillimes, showInstructions, orderId, changeFor }: Props) {
   const t = await getT();
   const info = PAYMENT_INFO[method];
   const network = CRYPTO_NETWORKS.find((n) => n.id === cryptoNetwork);
   const lines = method === "CRYPTO" && network ? [{ label: "Address", value: network.address }] : info.lines;
   const waiting = status === "PENDING" && method !== "CASH_ON_DELIVERY";
+  // Each crypto network counts as its own way to pay.
+  const hasOtherChoice = AVAILABLE_ONLINE_METHODS.filter((m) => m !== "CRYPTO").length + AVAILABLE_CRYPTO_NETWORKS.length > 1;
 
   return (
     <section className="panel payBox">
@@ -75,6 +80,7 @@ export default async function PaymentPanel({ method, cryptoNetwork, status, paym
             ))}
           </dl>
           <p className="warnNote">{t("payment.warning")}</p>
+          {changeFor && hasOtherChoice && <ChangePaymentMethod orderId={changeFor} method={method} cryptoNetwork={cryptoNetwork} />}
         </>
       ) : (
         <p className="muted">{t("payment.waitingCustomer")}</p>

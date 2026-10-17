@@ -44,6 +44,13 @@ export const MessageRepository = {
     return image.dataBase64 && !dataBase64 ? null : { ...image, dataBase64 };
   },
 
+  // The photos of an order's chat, so they can be removed from Cloudinary before the order is deleted.
+  findImagesForOrder: async (orderId: string) => {
+    const withPhoto = await db.orm.public.OrderMessage.where({ orderId, hasImage: true }).all();
+    if (withPhoto.length === 0) return [];
+    return await db.orm.public.MessageImage.where((i) => i.messageId.in(withPhoto.map((m) => m.id))).all();
+  },
+
   findImagesStoredInDatabase: async () => {
     return await db.orm.public.MessageImage.where((i) => i.dataBase64.isNotNull()).all();
   },

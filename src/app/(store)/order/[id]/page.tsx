@@ -108,6 +108,7 @@ export default async function OrderPage({ params, searchParams }: Props) {
             paymentStatus={order.paymentStatus}
             totalMillimes={order.totalMillimes}
             showInstructions
+            changeFor={isOwner ? order.id : undefined}
           />
 
           {waitingForShop && <p className="deliveryNote">{availabilityText(t, availability)}</p>}

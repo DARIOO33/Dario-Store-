@@ -7,13 +7,14 @@ import { ProductRepository } from "../prisma/products";
 import { OrderRepository, ORDER_STATUSES, type OrderStatus, type PaymentStatus } from "../prisma/orders";
 import { MessageRepository } from "../prisma/messages";
 import { OrderNotifications } from "./order-notifications";
+import { ChatImages } from "./chat-images";
 import { emailConfigured } from "../lib/email";
 import { runAfterResponse } from "../lib/background";
 import { UserError, userError } from "../lib/result";
 import { now } from "../lib/time";
 import { cartKey } from "../lib/cart-key";
 import { MAX_QUANTITY_PER_LINE, shippingFee } from "../lib/store";
-import { AVAILABLE_CRYPTO_NETWORKS, AVAILABLE_ONLINE_METHODS, type PaymentMethod } from "../lib/payments";
+import { AVAILABLE_CRYPTO_NETWORKS, AVAILABLE_ONLINE_METHODS, paymentLabel, type PaymentMethod } from "../lib/payments";
 import { localized } from "../i18n/content";
 import { isTeam } from "../lib/roles";
 import { createTranslator } from "../i18n/translate";
@@ -174,19 +175,21 @@ function resolvePayment(prepaid: boolean, isPick: boolean, input: CheckoutInput)
 
   if (prepaid) {
     if (!input.userId) throw userError(isPick ? "errors.loginForPicks" : "errors.loginForDigital");
-
-    const chosen = AVAILABLE_ONLINE_METHODS.find((method) => method === input.paymentMethod);
-    if (!chosen) throw userError("errors.choosePayment");
-    paymentMethod = chosen;
-
-    if (chosen === "CRYPTO") {
-      const network = AVAILABLE_CRYPTO_NETWORKS.find((n) => n.id === input.cryptoNetwork);
-      if (!network) throw userError("errors.chooseNetwork");
-      cryptoNetwork = network.id;
-    }
+    ({ paymentMethod, cryptoNetwork } = pickOnlineMethod(input.paymentMethod, input.cryptoNetwork));
   }
 
   return { paymentMethod, cryptoNetwork };
+}
+
+// One of the online methods the shop really offers (and a network for crypto).
+function pickOnlineMethod(method: string, network: string) {
+  const chosen = AVAILABLE_ONLINE_METHODS.find((m) => m === method);
+  if (!chosen) throw userError("errors.choosePayment");
+  if (chosen !== "CRYPTO") return { paymentMethod: chosen, cryptoNetwork: null };
+
+  const known = AVAILABLE_CRYPTO_NETWORKS.find((n) => n.id === network);
+  if (!known) throw userError("errors.chooseNetwork");
+  return { paymentMethod: chosen, cryptoNetwork: known.id };
 }
 
 // Remembers when the order first reached each stage (the customer sees these dates in the chat).
@@ -437,6 +440,24 @@ export const OrderService = {
     runAfterResponse(() => OrderNotifications.paymentSent(order));
   },
 
+  // The customer chose the wrong way to pay: they can switch to another online method until they
+  // say "Payment sent" (the store then looks for the money in one place). Cash orders stay cash.
+  changePaymentMethod: async (id: string, viewer: Viewer, input: { paymentMethod: string; cryptoNetwork: string }, locale: Locale) => {
+    const order = await OrderRepository.findById(id);
+
+    if (!viewer || !order || order.userId !== viewer.id) throw userError("errors.orderNotFound");
+    if (order.paymentMethod === "CASH_ON_DELIVERY") throw userError("errors.paidOnDelivery");
+    if (order.status !== "PENDING" || (order.paymentStatus !== "PENDING" && order.paymentStatus !== "FAILED")) throw userError("errors.paymentMethodLocked");
+
+    const { paymentMethod, cryptoNetwork } = pickOnlineMethod(input.paymentMethod, input.cryptoNetwork);
+    if (paymentMethod === order.paymentMethod && cryptoNetwork === order.cryptoNetwork) return;
+
+    if (!(await OrderRepository.changePaymentMethod(id, paymentMethod, cryptoNetwork))) throw userError("errors.paymentMethodLocked");
+    // So the team knows where to look for the money (no email: "Payment sent" brings one).
+    const t = createTranslator(locale);
+    await MessageRepository.create({ orderId: id, fromAdmin: false, senderUserId: viewer.id, body: t("chatSystem.paymentMethodChanged", { method: paymentLabel(t, paymentMethod, cryptoNetwork) }), hasImage: false, teamEmailedAt: now() });
+  },
+
   // The proof wasn't good enough: the payment is marked FAILED and the customer can send a new one.
   requestNewProof: async (id: string) => {
     const order = await OrderRepository.findById(id);
@@ -463,6 +484,20 @@ export const OrderService = {
     if (order.paymentStatus !== "VERIFIED") throw new UserError("Only a payment that was received can be refunded.");
 
     await OrderRepository.setPaymentStatus(id, "REFUNDED");
+  },
+
+  // Admin: removes a cancelled order for good (its items, chat and chat photos too). A payment that was
+  // received must be marked refunded first, so money still owed to a customer never disappears.
+  deleteCancelled: async (id: string) => {
+    const order = await OrderRepository.findById(id);
+
+    if (!order) throw new UserError("That order no longer exists.");
+    if (order.status !== "CANCELLED") throw new UserError("Only a cancelled order can be deleted.");
+    if (order.paymentStatus === "VERIFIED") throw new UserError("This order was paid: send the money back and mark it refunded before deleting it.");
+
+    const photos = await MessageRepository.findImagesForOrder(id);
+    if (!(await OrderRepository.deleteCancelled(id))) throw new UserError("That order no longer exists.");
+    for (const photo of photos) await ChatImages.remove(photo);
   },
 
   awaitingVerification: async () => {
